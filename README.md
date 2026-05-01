@@ -144,14 +144,7 @@ Intervention Recommendations
 - IT22165848 – Data Visualization & Explainable Analytics
 - IT22281982 – Knowledge-Augmented NLP Framework
 - IT22214034 – Data Engineering & Machine Learning Prediction
-
----
-
-## 📅 Project Timeline
-
-Duration: 6 Months  
-Completion: November 2026
-
+  
 ---
 
 ## 💡 Conclusion
