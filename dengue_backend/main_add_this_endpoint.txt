@@ -1,0 +1,8 @@
+# 1) Add these imports to main.py
+from models.schemas import ChatRequest, ClaimRequest, SimulationRequest
+from services.simulator_service import simulate_counterfactual_risk
+
+# 2) Add this endpoint to main.py
+@app.post("/simulate-risk")
+def simulate_risk(request: SimulationRequest):
+    return simulate_counterfactual_risk(request)
