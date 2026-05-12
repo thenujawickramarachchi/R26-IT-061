@@ -1,0 +1,25 @@
+// Add this method inside ApiService class
+
+static Future<Map<String, dynamic>> simulateRisk(Map<String, dynamic> payload) async {
+  try {
+    final response = await http.post(
+      Uri.parse("$baseUrl/simulate-risk"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode(payload),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+  } catch (e) {
+    return {
+      "error": true,
+      "message": "Simulator connection failed: $e",
+    };
+  }
+
+  return {
+    "error": true,
+    "message": "Simulator request failed",
+  };
+}
