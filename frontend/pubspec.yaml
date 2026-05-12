@@ -1,0 +1,26 @@
+name: dengue_alert_colombo
+description: ML based dengue outbreak prediction mobile app with explainable AI.
+publish_to: 'none'
+version: 2.0.0+2
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_animate: ^4.5.2
+  shimmer: ^3.0.0
+  http: ^1.2.2
+  fl_chart: ^0.69.0
+  cupertino_icons: ^1.0.8
+  flutter_map: ^7.0.2
+latlong2: ^0.9.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
