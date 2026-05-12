@@ -116,6 +116,16 @@ Intervention Recommendations
 
 ---
 
+## 📱 Mobile App Prototype
+
+The Flutter mobile application allows users to enter dengue-related weather and time-based values, send them to the FastAPI backend, and view the predicted dengue outbreak risk level with class probabilities.
+
+<p align="center">
+  <img src="assets/e041c6cb-16e5-4be8-97c8-4adadee1b46c.jpg" width="300" alt="Dengue Outbreak Prediction Mobile App">
+</p>
+
+---
+
 ## 🛠️ Technologies Used
 
 - Python (Pandas, NumPy)
