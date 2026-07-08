@@ -157,6 +157,19 @@ The Flutter mobile application allows users to enter dengue-related weather and 
   
 ---
 
+## 🌐 Hosted Backend API
+
+The Machine Learning prediction backend is deployed using Hugging Face Spaces as a FastAPI service. This allows the web dashboard, mobile application, and other system components to access the same centralized ML prediction API.
+
+### 🔗 API Base URL
+
+https://sahan-kaveesha-r26-it-061-dengue-api.hf.space
+
+### 📘 API Documentation
+
+https://sahan-kaveesha-r26-it-061-dengue-api.hf.space/docs
+
+---
 ## 💡 Conclusion
 
 This project provides a complete AI-driven dengue surveillance system that combines prediction, explainability, knowledge extraction, and intelligent decision-making to support effective public health interventions.
