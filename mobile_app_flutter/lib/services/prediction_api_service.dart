@@ -34,8 +34,7 @@ class PredictionApiService {
       Map<String, dynamic>? responseData;
 
       try {
-        responseData =
-            jsonDecode(response.body) as Map<String, dynamic>;
+        responseData = jsonDecode(response.body) as Map<String, dynamic>;
       } catch (_) {
         responseData = null;
       }
@@ -54,7 +53,7 @@ class PredictionApiService {
       throw PredictionApiException(errorMessage);
     } on SocketException {
       throw const PredictionApiException(
-        'No internet connection.',
+        'No internet connection. Please check your network.',
       );
     } on TimeoutException {
       throw const PredictionApiException(
