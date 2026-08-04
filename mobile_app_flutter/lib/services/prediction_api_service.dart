@@ -7,14 +7,14 @@ import 'package:http/http.dart' as http;
 import '../models/prediction_result.dart';
 
 class PredictionApiService {
-  static const String baseUrl =
+  static const String _baseUrl =
       'https://sahan-kaveesha-r26-it-061-dengue-api.hf.space';
 
   Future<PredictionResult> predictFuture({
     required int year,
     required int week,
   }) async {
-    final uri = Uri.parse('$baseUrl/predict-future');
+    final uri = Uri.parse('$_baseUrl/predict-future');
 
     try {
       final response = await http
@@ -24,10 +24,7 @@ class PredictionApiService {
               'Content-Type': 'application/json',
               'Accept': 'application/json',
             },
-            body: jsonEncode({
-              'year': year,
-              'week': week,
-            }),
+            body: jsonEncode({'year': year, 'week': week}),
           )
           .timeout(const Duration(seconds: 90));
 
@@ -66,9 +63,7 @@ class PredictionApiService {
     } on PredictionApiException {
       rethrow;
     } catch (error) {
-      throw PredictionApiException(
-        'Prediction failed: $error',
-      );
+      throw PredictionApiException('Prediction failed: $error');
     }
   }
 }

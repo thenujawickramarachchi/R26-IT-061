@@ -7,8 +7,7 @@ class DenguePredictionScreen extends StatefulWidget {
   const DenguePredictionScreen({super.key});
 
   @override
-  State<DenguePredictionScreen> createState() =>
-      _DenguePredictionScreenState();
+  State<DenguePredictionScreen> createState() => _DenguePredictionScreenState();
 }
 
 class _DenguePredictionScreenState extends State<DenguePredictionScreen> {
@@ -30,18 +29,9 @@ class _DenguePredictionScreenState extends State<DenguePredictionScreen> {
     'Thimbirigasyaya',
   ];
 
-  final List<int> _years = const [
-    2026,
-    2027,
-    2028,
-    2029,
-    2030,
-  ];
+  final List<int> _years = const [2026, 2027, 2028, 2029, 2030];
 
-  final List<int> _weeks = List.generate(
-    52,
-    (index) => index + 1,
-  );
+  final List<int> _weeks = List.generate(52, (index) => index + 1);
 
   String? _selectedArea;
   int _selectedYear = 2026;
@@ -52,14 +42,21 @@ class _DenguePredictionScreenState extends State<DenguePredictionScreen> {
   String? _errorMessage;
 
   Future<void> _predictRisk() async {
+    if (_isLoading) {
+      return;
+    }
+
     if (_selectedArea == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please select an area.'),
+          content: Text('Please select an area before predicting.'),
+          behavior: SnackBarBehavior.floating,
         ),
       );
       return;
     }
+
+    FocusScope.of(context).unfocus();
 
     setState(() {
       _isLoading = true;
@@ -73,22 +70,30 @@ class _DenguePredictionScreenState extends State<DenguePredictionScreen> {
         week: _selectedWeek,
       );
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
         _result = result;
       });
     } on PredictionApiException catch (error) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
         _errorMessage = error.message;
       });
-    } catch (error) {
-      if (!mounted) return;
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
-        _errorMessage = 'Unexpected error: $error';
+        _errorMessage =
+            'Unable to generate the prediction. Please check your '
+            'internet connection and try again.';
       });
     } finally {
       if (mounted) {
@@ -150,14 +155,49 @@ class _DenguePredictionScreenState extends State<DenguePredictionScreen> {
   }
 
   String _formatFeatureName(String key) {
+    const customNames = {
+      'rainfall_mm': 'Rainfall (mm)',
+      'humidity_pct': 'Humidity (%)',
+      'temp_max_c': 'Maximum Temperature (°C)',
+      'temp_min_c': 'Minimum Temperature (°C)',
+      'temp_mean_c': 'Mean Temperature (°C)',
+      'dengue_lag_1': 'Dengue Cases - Previous Week',
+      'dengue_lag_2': 'Dengue Cases - Two Weeks Ago',
+      'rainfall_lag_1': 'Rainfall - Previous Week',
+      'humidity_lag_1': 'Humidity - Previous Week',
+    };
+
+    if (customNames.containsKey(key)) {
+      return customNames[key]!;
+    }
+
     return key
         .replaceAll('_', ' ')
         .split(' ')
         .map((word) {
-          if (word.isEmpty) return word;
+          if (word.isEmpty) {
+            return word;
+          }
+
           return word[0].toUpperCase() + word.substring(1);
         })
         .join(' ');
+  }
+
+  String _formatFeatureValue(String key, dynamic value) {
+    if (value == null) {
+      return 'N/A';
+    }
+
+    if (value is num) {
+      if (key == 'dengue_lag_1' || key == 'dengue_lag_2') {
+        return value.toStringAsFixed(0);
+      }
+
+      return value.toStringAsFixed(2);
+    }
+
+    return value.toString();
   }
 
   @override
@@ -173,15 +213,26 @@ class _DenguePredictionScreenState extends State<DenguePredictionScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _buildHeaderCard(),
               const SizedBox(height: 16),
               _buildInputCard(),
-              const SizedBox(height: 16),
-              if (_isLoading) _buildLoadingCard(),
-              if (_errorMessage != null) _buildErrorCard(),
-              if (_result != null) _buildResultCard(_result!),
+              if (_isLoading) ...[
+                const SizedBox(height: 16),
+                _buildLoadingCard(),
+              ],
+              if (_errorMessage != null) ...[
+                const SizedBox(height: 16),
+                _buildErrorCard(),
+              ],
+              if (_result != null) ...[
+                const SizedBox(height: 16),
+                _buildResultCard(_result!),
+              ],
+              const SizedBox(height: 24),
             ],
           ),
         ),
@@ -192,6 +243,7 @@ class _DenguePredictionScreenState extends State<DenguePredictionScreen> {
   Widget _buildHeaderCard() {
     return Card(
       elevation: 2,
+      clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Row(
@@ -212,14 +264,12 @@ class _DenguePredictionScreenState extends State<DenguePredictionScreen> {
                 children: [
                   Text(
                     'Colombo District',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 19,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 19),
                   ),
                   SizedBox(height: 4),
                   Text(
                     'Select an area and future week to predict dengue risk.',
+                    style: TextStyle(height: 1.4),
                   ),
                 ],
               ),
@@ -233,12 +283,15 @@ class _DenguePredictionScreenState extends State<DenguePredictionScreen> {
   Widget _buildInputCard() {
     return Card(
       elevation: 2,
+      clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             DropdownButtonFormField<String>(
-              value: _selectedArea,
+              initialValue: _selectedArea,
+              isExpanded: true,
               decoration: const InputDecoration(
                 labelText: 'Select Area',
                 prefixIcon: Icon(Icons.location_on_outlined),
@@ -247,7 +300,7 @@ class _DenguePredictionScreenState extends State<DenguePredictionScreen> {
               items: _areas.map((area) {
                 return DropdownMenuItem<String>(
                   value: area,
-                  child: Text(area),
+                  child: Text(area, overflow: TextOverflow.ellipsis),
                 );
               }).toList(),
               onChanged: _isLoading
@@ -261,79 +314,78 @@ class _DenguePredictionScreenState extends State<DenguePredictionScreen> {
                     },
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<int>(
-                    value: _selectedYear,
-                    decoration: const InputDecoration(
-                      labelText: 'Year',
-                      prefixIcon: Icon(Icons.calendar_today),
-                      border: OutlineInputBorder(),
-                    ),
-                    items: _years.map((year) {
-                      return DropdownMenuItem<int>(
-                        value: year,
-                        child: Text(year.toString()),
-                      );
-                    }).toList(),
-                    onChanged: _isLoading
-                        ? null
-                        : (value) {
-                            if (value != null) {
-                              setState(() {
-                                _selectedYear = value;
-                                _result = null;
-                                _errorMessage = null;
-                              });
-                            }
-                          },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: DropdownButtonFormField<int>(
-                    value: _selectedWeek,
-                    decoration: const InputDecoration(
-                      labelText: 'Week',
-                      prefixIcon: Icon(Icons.date_range),
-                      border: OutlineInputBorder(),
-                    ),
-                    items: _weeks.map((week) {
-                      return DropdownMenuItem<int>(
-                        value: week,
-                        child: Text('Week $week'),
-                      );
-                    }).toList(),
-                    onChanged: _isLoading
-                        ? null
-                        : (value) {
-                            if (value != null) {
-                              setState(() {
-                                _selectedWeek = value;
-                                _result = null;
-                                _errorMessage = null;
-                              });
-                            }
-                          },
-                  ),
-                ),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final useVerticalLayout = constraints.maxWidth < 430;
+
+                final yearDropdown = _buildYearDropdown();
+                final weekDropdown = _buildWeekDropdown();
+
+                if (useVerticalLayout) {
+                  return Column(
+                    children: [
+                      yearDropdown,
+                      const SizedBox(height: 16),
+                      weekDropdown,
+                    ],
+                  );
+                }
+
+                return Row(
+                  children: [
+                    Expanded(child: yearDropdown),
+                    const SizedBox(width: 12),
+                    Expanded(child: weekDropdown),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 20),
             SizedBox(
-              width: double.infinity,
               height: 52,
-              child: ElevatedButton.icon(
+              child: ElevatedButton(
                 onPressed: _isLoading ? null : _predictRisk,
-                icon: const Icon(Icons.analytics_outlined),
-                label: Text(
-                  _isLoading ? 'Predicting...' : 'Predict Dengue Risk',
-                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF00796B),
                   foregroundColor: Colors.white,
+                  disabledBackgroundColor: const Color(
+                    0xFF00796B,
+                  ).withValues(alpha: 0.55),
+                  disabledForegroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
+                child: _isLoading
+                    ? const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 21,
+                            height: 21,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(width: 12),
+                          Text(
+                            'Predicting...',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      )
+                    : const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.analytics_outlined),
+                          SizedBox(width: 10),
+                          Text(
+                            'Predict Dengue Risk',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
               ),
             ),
             const SizedBox(height: 12),
@@ -344,6 +396,7 @@ class _DenguePredictionScreenState extends State<DenguePredictionScreen> {
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.black54,
+                height: 1.4,
               ),
             ),
           ],
@@ -352,16 +405,81 @@ class _DenguePredictionScreenState extends State<DenguePredictionScreen> {
     );
   }
 
+  Widget _buildYearDropdown() {
+    return DropdownButtonFormField<int>(
+      initialValue: _selectedYear,
+      isExpanded: true,
+      decoration: const InputDecoration(
+        labelText: 'Year',
+        prefixIcon: Icon(Icons.calendar_today_outlined),
+        border: OutlineInputBorder(),
+      ),
+      items: _years.map((year) {
+        return DropdownMenuItem<int>(value: year, child: Text(year.toString()));
+      }).toList(),
+      onChanged: _isLoading
+          ? null
+          : (value) {
+              if (value == null) {
+                return;
+              }
+
+              setState(() {
+                _selectedYear = value;
+                _result = null;
+                _errorMessage = null;
+              });
+            },
+    );
+  }
+
+  Widget _buildWeekDropdown() {
+    return DropdownButtonFormField<int>(
+      initialValue: _selectedWeek,
+      isExpanded: true,
+      decoration: const InputDecoration(
+        labelText: 'Week',
+        prefixIcon: Icon(Icons.date_range_outlined),
+        border: OutlineInputBorder(),
+      ),
+      items: _weeks.map((week) {
+        return DropdownMenuItem<int>(value: week, child: Text('Week $week'));
+      }).toList(),
+      onChanged: _isLoading
+          ? null
+          : (value) {
+              if (value == null) {
+                return;
+              }
+
+              setState(() {
+                _selectedWeek = value;
+                _result = null;
+                _errorMessage = null;
+              });
+            },
+    );
+  }
+
   Widget _buildLoadingCard() {
     return const Card(
+      elevation: 2,
       child: Padding(
         padding: EdgeInsets.all(24),
         child: Column(
           children: [
-            CircularProgressIndicator(),
+            CircularProgressIndicator(color: Color(0xFF00796B)),
             SizedBox(height: 14),
             Text(
               'Generating dengue risk prediction...',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            SizedBox(height: 6),
+            Text(
+              'The hosted API may take a few moments to respond.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, color: Colors.black54),
             ),
           ],
         ),
@@ -371,31 +489,28 @@ class _DenguePredictionScreenState extends State<DenguePredictionScreen> {
 
   Widget _buildErrorCard() {
     return Card(
+      elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Column(
           children: [
-            const Icon(
-              Icons.error_outline,
-              color: Colors.red,
-              size: 42,
-            ),
+            const Icon(Icons.error_outline, color: Colors.red, size: 42),
             const SizedBox(height: 10),
             const Text(
               'Prediction Failed',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
             const SizedBox(height: 8),
             Text(
-              _errorMessage!,
+              _errorMessage ??
+                  'Unable to generate the prediction. '
+                      'Please try again.',
               textAlign: TextAlign.center,
+              style: const TextStyle(height: 1.4),
             ),
             const SizedBox(height: 14),
             OutlinedButton.icon(
-              onPressed: _predictRisk,
+              onPressed: _isLoading ? null : _predictRisk,
               icon: const Icon(Icons.refresh),
               label: const Text('Try Again'),
             ),
@@ -410,37 +525,33 @@ class _DenguePredictionScreenState extends State<DenguePredictionScreen> {
 
     return Card(
       elevation: 3,
+      clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Prediction for ${_selectedArea ?? 'Selected Area'}',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 19,
-              ),
+              'Prediction for '
+              '${_selectedArea ?? 'Selected Area'}',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 19),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 5),
             Text(
               '${result.year} • Week ${result.week} • '
               '${_monthName(result.calculatedMonth)}',
-              style: const TextStyle(
-                color: Colors.black54,
-              ),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.black54),
             ),
             const SizedBox(height: 20),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 22,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
               decoration: BoxDecoration(
-                color: riskColor.withOpacity(0.12),
+                color: riskColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: riskColor),
+                border: Border.all(color: riskColor, width: 1.2),
               ),
               child: Column(
                 children: [
@@ -450,27 +561,25 @@ class _DenguePredictionScreenState extends State<DenguePredictionScreen> {
                     size: 52,
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    '${result.predictedOutbreakLevel.toUpperCase()} RISK',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 26,
-                      color: riskColor,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      '${result.predictedOutbreakLevel.toUpperCase()} '
+                      'RISK',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 26,
+                        color: riskColor,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 22),
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Prediction Probabilities',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 17,
-                ),
-              ),
+            const Text(
+              'Prediction Probabilities',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
             ),
             const SizedBox(height: 14),
             _buildProbabilityRow(
@@ -490,39 +599,81 @@ class _DenguePredictionScreenState extends State<DenguePredictionScreen> {
               probability: result.lowProbability,
               color: Colors.green,
             ),
+            const SizedBox(height: 20),
+            _buildHistoricalAverageNote(),
             const Divider(height: 34),
-            _buildInfoRow(
-              'Model',
-              result.modelUsed,
+            const Text(
+              'Model Information',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
             ),
-            _buildInfoRow(
-              'Validation',
-              result.validation,
-            ),
-            _buildInfoRow(
-              'Accuracy',
-              '84.31%',
-            ),
-            _buildInfoRow(
-              'Weighted F1',
-              '82.11%',
-            ),
+            const SizedBox(height: 8),
+            _buildInfoRow('Model', result.modelUsed),
+            _buildInfoRow('Validation', result.validation),
+            _buildInfoRow('Accuracy', '84.31%'),
+            _buildInfoRow('Weighted F1', '82.11%'),
             const Divider(height: 34),
             _buildAdvancedDetailsSection(result),
             const SizedBox(height: 16),
             _buildDataSourcesSection(result),
-            const SizedBox(height: 10),
-            const Text(
-              'The selected area is used as prediction context. '
-              'The prediction is generated using Colombo District-level ML data.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.black54,
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blueGrey.shade50,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Text(
+                'Area clarification: The selected area is currently '
+                'used as interface context. The prediction itself is '
+                'generated using Colombo District-level '
+                'machine-learning data.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.black54,
+                  height: 1.4,
+                ),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildHistoricalAverageNote() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.amber.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.amber.shade700, width: 1),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.info_outline_rounded,
+            color: Colors.amber.shade900,
+            size: 23,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Important: This prediction is based on historical '
+              'seasonal average values, not real-time weather '
+              'forecast data.',
+              style: TextStyle(
+                color: Colors.amber.shade900,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -540,28 +691,27 @@ class _DenguePredictionScreenState extends State<DenguePredictionScreen> {
           width: 70,
           child: Text(
             label,
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-            ),
+            style: const TextStyle(fontWeight: FontWeight.w600),
           ),
         ),
         Expanded(
-          child: LinearProgressIndicator(
-            value: progress,
-            minHeight: 10,
-            color: color,
-            backgroundColor: color.withOpacity(0.15),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 10,
+              color: color,
+              backgroundColor: color.withValues(alpha: 0.15),
+            ),
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 10),
         SizedBox(
-          width: 58,
+          width: 62,
           child: Text(
             '${probability.toStringAsFixed(2)}%',
             textAlign: TextAlign.right,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
         ),
       ],
@@ -570,25 +720,24 @@ class _DenguePredictionScreenState extends State<DenguePredictionScreen> {
 
   Widget _buildInfoRow(String title, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 110,
+          Expanded(
+            flex: 4,
             child: Text(
               title,
-              style: const TextStyle(
-                color: Colors.black54,
-              ),
+              style: const TextStyle(color: Colors.black54, height: 1.35),
             ),
           ),
+          const SizedBox(width: 12),
           Expanded(
+            flex: 5,
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.w600, height: 1.35),
             ),
           ),
         ],
@@ -601,7 +750,7 @@ class _DenguePredictionScreenState extends State<DenguePredictionScreen> {
       return const SizedBox.shrink();
     }
 
-    final fieldsToShow = [
+    const fieldsToShow = [
       'rainfall_mm',
       'humidity_pct',
       'temp_max_c',
@@ -615,19 +764,21 @@ class _DenguePredictionScreenState extends State<DenguePredictionScreen> {
 
     return ExpansionTile(
       tilePadding: EdgeInsets.zero,
+      childrenPadding: const EdgeInsets.only(bottom: 8),
       title: const Text(
         'Advanced Details',
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 17,
-        ),
+        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+      ),
+      subtitle: const Text(
+        'Automatically generated model input values',
+        style: TextStyle(fontSize: 12),
       ),
       children: fieldsToShow.map((key) {
         final value = result.autoGeneratedFeatures[key];
 
         return _buildInfoRow(
           _formatFeatureName(key),
-          value?.toString() ?? 'N/A',
+          _formatFeatureValue(key, value),
         );
       }).toList(),
     );
@@ -640,12 +791,14 @@ class _DenguePredictionScreenState extends State<DenguePredictionScreen> {
 
     return ExpansionTile(
       tilePadding: EdgeInsets.zero,
+      childrenPadding: const EdgeInsets.only(bottom: 8),
       title: const Text(
         'Data Sources Used',
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 17,
-        ),
+        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+      ),
+      subtitle: const Text(
+        'Data information returned by the API',
+        style: TextStyle(fontSize: 12),
       ),
       children: result.dataSourcesUsed.entries.map((entry) {
         return _buildInfoRow(
