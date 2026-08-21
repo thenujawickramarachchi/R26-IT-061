@@ -12,7 +12,10 @@ class RecommendationScreen extends StatefulWidget {
 class _RecommendationScreenState extends State<RecommendationScreen> {
   final TextEditingController casesController = TextEditingController();
 
-  String selectedArea = 'Colombo';
+  String? selectedArea;
+  List<String> areas = [];
+  bool isAreasLoading = true;
+  String? areasLoadError;
   double rainfall = 15.0;
   double temperature = 28.0;
 
@@ -27,75 +30,97 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
   static const Color sub = Color(0xFF6B7280);
   static const Color red = Color(0xFFE53935);
 
-  final List<String> areas = [
-    'Colombo',
-    'Dehiwala',
-    'Moratuwa',
-    'Kotte',
-    'Kaduwela',
-    'Kesbewa',
-    'Kolonnawa',
-    'Maharagama',
-    'Padukka',
-    'Seethawaka',
-    'Homagama',
-    'Avissawella',
-  ];
+  @override
+  void initState() {
+    super.initState();
+    loadMohAreas();
+  }
 
-  Future<void> getRecommendation() async {
-    if (casesController.text.trim().isEmpty) {
-      setState(() {
-        errorMessage = 'Please enter dengue cases.';
-      });
-      return;
-    }
-
-    final int? parsedCases = int.tryParse(casesController.text.trim());
-
-    if (parsedCases == null || parsedCases <= 0) {
-      setState(() {
-        errorMessage = 'Please enter a valid dengue case count greater than 0.';
-      });
-      return;
-    }
-
-    final int cases = parsedCases;
-
-    setState(() {
-      isLoading = true;
-      result = null;
-      errorMessage = null;
-    });
-
+  Future<void> loadMohAreas() async {
     try {
-      final response = await ApiService.getRecommendation(
-        area: selectedArea,
-        cases: cases,
-        rainfall: rainfall,
-        temperature: temperature,
-      );
+      final loadedAreas = await ApiService.getMohAreas();
 
+      if (!mounted) return;
       setState(() {
-        result = response;
-        isLoading = false;
+        areas = loadedAreas;
+        selectedArea = loadedAreas.isNotEmpty ? loadedAreas.first : null;
+        isAreasLoading = false;
+        areasLoadError = null;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
-        errorMessage = e.toString();
-        isLoading = false;
+        isAreasLoading = false;
+        areasLoadError = e.toString();
       });
     }
   }
 
-  void loadHighRiskSample() {
+  Future<void> getRecommendation() async {
+  if (selectedArea == null) {
     setState(() {
-      selectedArea = 'Colombo';
-      casesController.text = '6000';
-      rainfall = 20.0;
-      temperature = 28.0;
-      result = null;
-      errorMessage = null;
+      errorMessage = 'Please wait until MOH areas are loaded.';
     });
+    return;
+  }
+
+  if (casesController.text.trim().isEmpty) {
+    setState(() {
+      errorMessage = 'Please enter dengue cases.';
+    });
+    return;
+  }
+
+  final int? parsedCases = int.tryParse(casesController.text.trim());
+
+  if (parsedCases == null || parsedCases <= 0) {
+    setState(() {
+      errorMessage = 'Please enter a valid dengue case count greater than 0.';
+    });
+    return;
+  }
+
+  setState(() {
+    isLoading = true;
+    result = null;
+    errorMessage = null;
+  });
+
+  try {
+    final response = await ApiService.getRecommendation(
+      area: selectedArea!,
+      cases: parsedCases,
+      rainfall: rainfall,
+      temperature: temperature,
+    );
+
+    setState(() {
+      result = response;
+      isLoading = false;
+    });
+  } catch (e) {
+    setState(() {
+      errorMessage = e.toString();
+      isLoading = false;
+    });
+  }
+  }
+  void loadHighRiskSample() {
+  if (areas.isEmpty) {
+    setState(() {
+      errorMessage = 'MOH areas are not loaded yet.';
+    });
+    return;
+  }
+
+  setState(() {
+    selectedArea = areas.first;
+    casesController.text = '6000';
+    rainfall = 20.0;
+    temperature = 28.0;
+    result = null;
+    errorMessage = null;
+  });
   }
 
   Color riskColor(String risk) {
@@ -311,20 +336,36 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
               style: TextStyle(fontWeight: FontWeight.bold, color: title),
             ),
             const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              value: selectedArea,
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.location_on_rounded),
+            if (isAreasLoading)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(12),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (areasLoadError != null)
+              Text(
+                'Could not load MOH areas: $areasLoadError',
+                style: const TextStyle(color: Colors.red),
+              )
+            else
+              DropdownButtonFormField<String>(
+                value: selectedArea,
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.location_on_rounded),
+                ),
+                items: areas
+                    .map(
+                      (area) => DropdownMenuItem<String>(
+                        value: area,
+                        child: Text(area),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  setState(() => selectedArea = value);
+                },
               ),
-              items: areas
-                  .map(
-                    (area) => DropdownMenuItem(value: area, child: Text(area)),
-                  )
-                  .toList(),
-              onChanged: (value) {
-                setState(() => selectedArea = value!);
-              },
-            ),
             const SizedBox(height: 18),
             const Text(
               'Dengue Cases',

@@ -80,4 +80,23 @@ class ApiService {
       );
     }
   }
+static Future<List<String>> getMohAreas() async {
+    try {
+      final url = Uri.parse('$baseUrl/moh-areas');
+
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+
+        return List<String>.from(data['areas'] ?? []);
+      } else {
+        throw Exception(
+          'Failed to load MOH areas. Status: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      throw Exception('Cannot load MOH areas from backend. Error: $e');
+    }
+  }
 }

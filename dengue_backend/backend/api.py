@@ -8,6 +8,7 @@ import numpy as np
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
+from supabase import create_client
 
 
 load_dotenv()
@@ -26,24 +27,25 @@ ACTIONS = [
     "Community Cleanup Campaign",
 ]
 
-MOH_AREAS = [
-    "Colombo",
-    "Dehiwala",
-    "Moratuwa",
-    "Kotte",
-    "Kaduwela",
-    "Kesbewa",
-    "Kolonnawa",
-    "Maharagama",
-    "Padukka",
-    "Seethawaka",
-    "Homagama",
-    "Avissawella",
-]
-
 SENDER_EMAIL = os.getenv("SENDER_EMAIL")
 SENDER_PASSWORD = os.getenv("SENDER_PASSWORD")
-PHI_EMAIL = os.getenv("PHI_EMAIL", "thisarithenuja@gmail.com")
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+
+supabase_client = None
+
+try:
+    if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
+        supabase_client = create_client(
+            SUPABASE_URL,
+            SUPABASE_SERVICE_ROLE_KEY,
+        )
+        print("Supabase connected successfully.")
+    else:
+        print("Supabase connection details are missing in .env file.")
+
+except Exception as e:
+    print("Supabase connection error:", e)
 
 
 try:
@@ -58,11 +60,111 @@ def current_time():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
+def get_moh_areas_from_db():
+    """Load MOH areas from Supabase; no area names are stored in code."""
+    if supabase_client is None:
+        return None, "Supabase is not connected."
+
+    try:
+        result = (
+            supabase_client.table("moh_areas")
+            .select("name")
+            .order("name")
+            .execute()
+        )
+        areas = [row["name"] for row in result.data if row.get("name")]
+
+        if not areas:
+            return None, "No MOH areas were found in the database."
+
+        return areas, None
+
+    except Exception as e:
+        print("MOH areas database lookup error:", str(e))
+        return None, f"Database lookup failed: {str(e)}"
+
+
+def get_phi_officer_from_db(area_name):
+    if supabase_client is None:
+        return None, None, "Supabase is not connected."
+
+    try:
+        area_result = (
+            supabase_client.table("moh_areas")
+            .select("id")
+            .eq("name", area_name)
+            .execute()
+        )
+
+        if not area_result.data:
+            return None, None, f"MOH area '{area_name}' was not found."
+
+        moh_area_id = area_result.data[0]["id"]
+
+        phi_result = (
+            supabase_client.table("phi_officers")
+            .select("id, full_name, email")
+            .eq("moh_area_id", moh_area_id)
+            .eq("is_active", True)
+            .limit(1)
+            .execute()
+        )
+
+        if not phi_result.data:
+            return moh_area_id, None, f"No active PHI officer found for {area_name}."
+
+        return moh_area_id, phi_result.data[0], None
+
+    except Exception as e:
+        print("PHI database lookup error:", str(e))
+        return None, None, f"Database lookup failed: {str(e)}"
+
+
+def save_warning_history(
+    moh_area_id,
+    phi_officer,
+    cases,
+    rainfall,
+    temperature,
+    risk_level,
+    top_action,
+    email_result,
+):
+    if supabase_client is None or moh_area_id is None:
+        return
+
+    try:
+        supabase_client.table("warning_history").insert(
+            {
+                "moh_area_id": moh_area_id,
+                "phi_officer_id": phi_officer["id"] if phi_officer else None,
+                "dengue_cases": cases,
+                "rainfall_mm": rainfall,
+                "temperature_c": temperature,
+                "risk_level": risk_level,
+                "recommended_action": top_action,
+                "recipient_email": email_result.get("receiver"),
+                "email_sent": email_result.get("sent", False),
+                "email_message": email_result.get("message"),
+            }
+        ).execute()
+
+        print("Warning history saved successfully.")
+
+    except Exception as e:
+        print("Warning history save error:", str(e))
+
+
 def validate_input(area, cases, rainfall, temperature):
     errors = []
 
-    if area not in MOH_AREAS:
-        errors.append(f"Invalid MOH area. Allowed areas: {', '.join(MOH_AREAS)}")
+    areas, database_error = get_moh_areas_from_db()
+    if database_error:
+        errors.append(database_error)
+    elif not area:
+        errors.append("MOH area is required.")
+    elif area not in areas:
+        errors.append("Invalid MOH area. Please select an area from the database list.")
 
     if cases <= 0:
         errors.append("Dengue cases must be greater than 0.")
@@ -227,18 +329,27 @@ def get_recommendations(cases, rainfall, temperature):
         return fallback_recommendations(risk_level)
 
 
-def send_phi_email(area, cases, rainfall, temperature, risk_level, top_action):
+def send_phi_email(
+    receiver_email,
+    receiver_name,
+    area,
+    cases,
+    rainfall,
+    temperature,
+    risk_level,
+    top_action,
+):
     if not SENDER_EMAIL or not SENDER_PASSWORD:
         return {
             "sent": False,
             "message": "Email not sent. Missing SENDER_EMAIL or SENDER_PASSWORD in .env file.",
-            "receiver": PHI_EMAIL,
+            "receiver": receiver_email,
         }
 
     subject = f"HIGH Dengue Risk Alert - {area}"
 
     body = f"""
-Dear PHI Officer,
+Dear {receiver_name},
 
 A HIGH dengue risk situation has been detected by the Dengue RL Intervention Optimization Agent.
 
@@ -264,21 +375,21 @@ AI-Powered Decision Support System
     try:
         message = MIMEMultipart()
         message["From"] = SENDER_EMAIL
-        message["To"] = PHI_EMAIL
+        message["To"] = receiver_email
         message["Subject"] = subject
         message.attach(MIMEText(body, "plain"))
 
         server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
         server.login(SENDER_EMAIL, SENDER_PASSWORD)
-        server.sendmail(SENDER_EMAIL, PHI_EMAIL, message.as_string())
+        server.sendmail(SENDER_EMAIL, receiver_email, message.as_string())
         server.quit()
 
-        print(f"Email sent successfully to {PHI_EMAIL}")
+        print(f"Email sent successfully to {receiver_email}")
 
         return {
             "sent": True,
-            "message": f"Warning email sent to {PHI_EMAIL}",
-            "receiver": PHI_EMAIL,
+            "message": f"Warning email sent to {receiver_name}.",
+            "receiver": receiver_email,
         }
 
     except Exception as e:
@@ -287,11 +398,10 @@ AI-Powered Decision Support System
         return {
             "sent": False,
             "message": f"Email sending failed: {str(e)}",
-            "receiver": PHI_EMAIL,
+            "receiver": receiver_email,
         }
 
-
-def build_recommendation_response(area, cases, rainfall, temperature, auto_email=True):
+def build_recommendation_response(area, cases, rainfall, temperature):
     risk_level = get_risk_level(cases, rainfall, temperature)
     recommendations = get_recommendations(cases, rainfall, temperature)
     top_action = recommendations[0]["action"]
@@ -299,18 +409,8 @@ def build_recommendation_response(area, cases, rainfall, temperature, auto_email
     email_result = {
         "sent": False,
         "message": "Risk level is not HIGH. Email not required.",
-        "receiver": PHI_EMAIL,
+        "receiver": None,
     }
-
-    if auto_email and risk_level == "HIGH":
-        email_result = send_phi_email(
-            area=area,
-            cases=cases,
-            rainfall=rainfall,
-            temperature=temperature,
-            risk_level=risk_level,
-            top_action=top_action,
-        )
 
     return {
         "success": True,
@@ -363,31 +463,41 @@ def health():
             "q_table_shape": str(q_table.shape) if q_table is not None else None,
             "sender_email_found": SENDER_EMAIL is not None,
             "sender_password_found": SENDER_PASSWORD is not None,
-            "phi_email": PHI_EMAIL,
+            "supabase_connected": supabase_client is not None,
         }
     )
 
 
 @app.route("/moh-areas", methods=["GET"])
 def moh_areas():
+    areas, database_error = get_moh_areas_from_db()
+
+    if database_error:
+        return jsonify({"success": False, "message": database_error}), 500
+
     return jsonify(
         {
             "success": True,
-            "count": len(MOH_AREAS),
+            "count": len(areas),
             "district": "Colombo",
-            "areas": MOH_AREAS,
+            "areas": areas,
         }
     )
 
 
 @app.route("/sample/high-risk", methods=["GET"])
 def sample_high_risk():
+    areas, database_error = get_moh_areas_from_db()
+
+    if database_error:
+        return jsonify({"success": False, "message": database_error}), 500
+
     return jsonify(
         {
             "success": True,
             "message": "Use this sample for panel/demo high-risk testing.",
             "sample": {
-                "area": "Colombo",
+                "area": areas[0],
                 "cases": 6000,
                 "rainfall": 20,
                 "temperature": 28,
@@ -401,7 +511,7 @@ def recommend():
     try:
         data = request.get_json(force=True)
 
-        area = data.get("area", "Colombo")
+        area = data.get("area")
         cases = int(data.get("cases", 0))
         rainfall = float(data.get("rainfall", 0))
         temperature = float(data.get("temperature", data.get("temp", 0)))
@@ -418,12 +528,12 @@ def recommend():
                 }
             ), 400
 
+        # Recommendations do not send e-mail. E-mail is sent only by /send-warning.
         response = build_recommendation_response(
             area=area,
             cases=cases,
             rainfall=rainfall,
             temperature=temperature,
-            auto_email=True,
         )
 
         return jsonify(response)
@@ -446,7 +556,7 @@ def send_warning():
     try:
         data = request.get_json(force=True)
 
-        area = data.get("area", "Colombo")
+        area = data.get("area")
         cases = int(data.get("cases", 0))
         rainfall = float(data.get("rainfall", 0))
         temperature = float(data.get("temperature", data.get("temp", 0)))
@@ -467,13 +577,45 @@ def send_warning():
         recommendations = get_recommendations(cases, rainfall, temperature)
         top_action = recommendations[0]["action"]
 
-        email_result = send_phi_email(
-            area=area,
+        # Get PHI officer details from Supabase
+        moh_area_id, phi_officer, database_error = get_phi_officer_from_db(area)
+
+        if risk_level != "HIGH":
+            email_result = {
+                "sent": False,
+                "message": "Email not sent because risk level is not HIGH.",
+                "receiver": phi_officer["email"] if phi_officer else None,
+            }
+
+        elif database_error:
+            email_result = {
+                "sent": False,
+                "message": database_error,
+                "receiver": None,
+            }
+
+        else:
+            email_result = send_phi_email(
+                receiver_email=phi_officer["email"],
+                receiver_name=phi_officer["full_name"],
+                area=area,
+                cases=cases,
+                rainfall=rainfall,
+                temperature=temperature,
+                risk_level=risk_level,
+                top_action=top_action,
+            )
+
+        # Save warning result in Supabase history table
+        save_warning_history(
+            moh_area_id=moh_area_id,
+            phi_officer=phi_officer,
             cases=cases,
             rainfall=rainfall,
             temperature=temperature,
             risk_level=risk_level,
             top_action=top_action,
+            email_result=email_result,
         )
 
         return jsonify(
@@ -488,7 +630,10 @@ def send_warning():
                 "risk_interpretation": get_risk_interpretation(risk_level),
                 "recommendations": recommendations,
                 "top_action": top_action,
-                "recommendation_explanation": get_action_explanation(risk_level, top_action),
+                "recommendation_explanation": get_action_explanation(
+                    risk_level,
+                    top_action,
+                ),
                 "email": email_result,
             }
         )
@@ -508,8 +653,35 @@ def send_warning():
 
 @app.route("/test-email", methods=["GET"])
 def test_email():
+    areas, database_error = get_moh_areas_from_db()
+
+    if database_error:
+        return jsonify(
+            {
+                "success": False,
+                "timestamp": current_time(),
+                "test": "PHI email test",
+                "email": {"sent": False, "message": database_error},
+            }
+        ), 500
+
+    test_area = areas[0]
+    _, phi_officer, database_error = get_phi_officer_from_db(test_area)
+
+    if database_error:
+        return jsonify(
+            {
+                "success": False,
+                "timestamp": current_time(),
+                "test": "PHI email test",
+                "email": {"sent": False, "message": database_error},
+            }
+        ), 500
+
     result = send_phi_email(
-        area="Colombo",
+        receiver_email=phi_officer["email"],
+        receiver_name=phi_officer["full_name"],
+        area=test_area,
         cases=6000,
         rainfall=20,
         temperature=28,
