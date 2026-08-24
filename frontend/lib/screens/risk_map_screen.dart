@@ -15,6 +15,19 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
   List<dynamic> areas = [];
   Map<String, dynamic>? selectedArea;
 
+  final Map<String, LatLng> areaCoordinates = {
+    "Avissawella": const LatLng(6.9540, 80.2100),
+    "Colombo": const LatLng(6.9271, 79.8612),
+    "Dehiwala": const LatLng(6.8517, 79.8657),
+    "Homagama": const LatLng(6.8440, 80.0030),
+    "Kaduwela": const LatLng(6.9300, 79.9820),
+    "Kesbewa": const LatLng(6.7800, 79.9300),
+    "Kolonnawa": const LatLng(6.9330, 79.8950),
+    "Kotte": const LatLng(6.8905, 79.9014),
+    "Maharagama": const LatLng(6.8480, 79.9260),
+    "Moratuwa": const LatLng(6.7730, 79.8820),
+  };
+
   @override
   void initState() {
     super.initState();
@@ -23,20 +36,103 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
 
   Future<void> loadMap() async {
     try {
-      final res = await ApiService.mohRisk();
+      // Get the 10 MOH area names
+      final areaNames = await ApiService.mohRisk();
+
+      debugPrint("========== MOH AREA NAMES ==========");
+      debugPrint(areaNames.toString());
+      debugPrint("Total areas: ${areaNames.length}");
+      debugPrint("====================================");
+
+      final List<Map<String, dynamic>> loadedAreas = [];
+
+      final Map<String, String> areaNameMapping = {
+        "Colombo": "CMC",
+      };
+
+      // Get risk prediction for each area
+      for (final item in areaNames) {
+        final String areaName = item.toString();
+
+        final String apiAreaName = areaNameMapping[areaName] ?? areaName;
+
+        try {
+          final prediction = await ApiService.predictAreaRisk(
+            area: apiAreaName,
+            year: 2026,
+            week: 13,
+          );
+
+          final coordinates = areaCoordinates[areaName];
+
+          if (coordinates == null) {
+            debugPrint(
+              "No coordinates found for: $areaName",
+            );
+            continue;
+          }
+
+          loadedAreas.add({
+            "name": areaName,
+            "risk":
+                prediction["predicted_area_risk_level"]?.toString() ?? "Low",
+            "lat": coordinates.latitude,
+            "lng": coordinates.longitude,
+            "probabilities": prediction["probabilities"],
+            "model_used": prediction["model_used"],
+            "validation": prediction["validation"],
+            "important_note": prediction["important_note"],
+            "confidence_level": prediction["data_context"]?["confidence_level"],
+          });
+
+          debugPrint(
+            "$areaName → "
+            "${prediction["predicted_area_risk_level"]}",
+          );
+        } catch (e) {
+          debugPrint(
+            "Prediction failed for $areaName: $e",
+          );
+        }
+      }
+
+      debugPrint("========== FINAL MAP DATA ==========");
+      debugPrint(loadedAreas.toString());
+      debugPrint("====================================");
+
+      if (!mounted) return;
+
       setState(() {
-        areas = res;
+        areas = loadedAreas;
         loading = false;
       });
     } catch (e) {
-      setState(() => loading = false);
+      debugPrint("========== MAP ERROR ==========");
+      debugPrint(e.toString());
+      debugPrint("===============================");
+
+      if (!mounted) return;
+
+      setState(() {
+        loading = false;
+      });
     }
   }
 
   Color riskColor(String risk) {
-    if (risk == "High") return const Color(0xFFFF2F6D);
-    if (risk == "Medium") return Colors.orange;
-    return Colors.green;
+    switch (risk.toLowerCase()) {
+      case "high":
+        return const Color(0xFFFF477E);
+
+      case "medium":
+        return const Color(0xFFFFA726);
+
+      case "low":
+        return const Color(0xFF18A982);
+
+      default:
+        return const Color(0xFF7E8A9D);
+    }
   }
 
   String riskMessage(String risk) {
@@ -139,12 +235,22 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
   }
 
   Widget selectedAreaPopup() {
-    if (selectedArea == null) return const SizedBox.shrink();
+    if (selectedArea == null) {
+      return const SizedBox.shrink();
+    }
 
     final name = selectedArea!["name"].toString();
     final risk = selectedArea!["risk"].toString();
-    final cases = selectedArea!["cases"] ?? "-";
     final color = riskColor(risk);
+
+    final probabilities =
+        selectedArea!["probabilities"] as Map<String, dynamic>? ?? {};
+
+    final high = (probabilities["High"] as num?)?.toDouble() ?? 0.0;
+
+    final medium = (probabilities["Medium"] as num?)?.toDouble() ?? 0.0;
+
+    final low = (probabilities["Low"] as num?)?.toDouble() ?? 0.0;
 
     return Positioned(
       left: 18,
@@ -155,86 +261,178 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.98),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: color.withValues(alpha: 0.25)),
+          border: Border.all(
+            color: color.withValues(alpha: 0.22),
+          ),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.10),
-              blurRadius: 18,
+              blurRadius: 20,
               offset: const Offset(0, 8),
             ),
           ],
         ),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: color.withValues(alpha: 0.14),
-              child: Icon(Icons.place, color: color),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF172033),
-                    ),
+            Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  const SizedBox(height: 6),
-                  Row(
+                  child: Icon(
+                    Icons.location_on_rounded,
+                    color: color,
+                    size: 26,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: color,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          "$risk Risk",
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 12,
-                          ),
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF172033),
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Text(
-                        "$cases cases",
-                        style: const TextStyle(
-                          color: Color(0xFF5F6B7A),
+                      const SizedBox(height: 3),
+                      const Text(
+                        "MOH area risk assessment",
+                        style: TextStyle(
+                          color: Color(0xFF8A94A6),
+                          fontSize: 11,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  Text(
-                    riskMessage(risk),
-                    style: const TextStyle(
-                      color: Color(0xFF5F6B7A),
-                      height: 1.35,
-                      fontWeight: FontWeight.w600,
+                ),
+                IconButton(
+                  onPressed: () {
+                    setState(() {
+                      selectedArea = null;
+                    });
+                  },
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    size: 20,
+                    color: Color(0xFF7E8A9D),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    "$risk Risk",
+                    style: TextStyle(
+                      color: color,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                const Icon(
+                  Icons.psychology_rounded,
+                  size: 16,
+                  color: Color(0xFF7E8A9D),
+                ),
+                const SizedBox(width: 5),
+                const Text(
+                  "AI model prediction",
+                  style: TextStyle(
+                    color: Color(0xFF7E8A9D),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              riskMessage(risk),
+              style: const TextStyle(
+                color: Color(0xFF5F6B7A),
+                height: 1.4,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              "Risk Probability Breakdown",
+              style: TextStyle(
+                color: Color(0xFF172033),
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 12),
+            probabilityRow(
+              "High",
+              high,
+              const Color(0xFFFF477E),
+            ),
+            const SizedBox(height: 10),
+            probabilityRow(
+              "Medium",
+              medium,
+              const Color(0xFFFFA726),
+            ),
+            const SizedBox(height: 10),
+            probabilityRow(
+              "Low",
+              low,
+              const Color(0xFF18A982),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF7F8FC),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.auto_awesome_rounded,
+                    color: Color(0xFF5B4BFF),
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      selectedArea!["model_used"]?.toString() ??
+                          "AI model-based risk assessment",
+                      style: const TextStyle(
+                        color: Color(0xFF5F6B7A),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ],
               ),
-            ),
-            IconButton(
-              onPressed: () {
-                setState(() {
-                  selectedArea = null;
-                });
-              },
-              icon: const Icon(Icons.close, size: 20),
             ),
           ],
         ),
@@ -242,52 +440,78 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
     );
   }
 
-  List<Map<String, dynamic>> mapSource() {
-    if (areas.isNotEmpty) {
-      return areas.map<Map<String, dynamic>>((e) {
-        return Map<String, dynamic>.from(e as Map);
-      }).toList();
-    }
+  Widget probabilityRow(
+    String label,
+    double value,
+    Color color,
+  ) {
+    final percentage = value.clamp(0.0, 100.0) / 100;
 
-    return [
-      {
-        "name": "Colombo MC",
-        "risk": "High",
-        "cases": 162,
-        "lat": 6.9271,
-        "lng": 79.8612,
-      },
-      {
-        "name": "Dehiwala",
-        "risk": "High",
-        "cases": 128,
-        "lat": 6.8760,
-        "lng": 79.8757,
-      },
-      {
-        "name": "Maharagama",
-        "risk": "Medium",
-        "cases": 95,
-        "lat": 6.8649,
-        "lng": 79.8997,
-      },
-      {
-        "name": "Kaduwela",
-        "risk": "Low",
-        "cases": 44,
-        "lat": 6.9147,
-        "lng": 79.9729,
-      },
-    ];
+    return Column(
+      children: [
+        Row(
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF65758E),
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              "${value.toStringAsFixed(1)}%",
+              style: TextStyle(
+                color: color,
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: LinearProgressIndicator(
+            value: percentage,
+            minHeight: 7,
+            color: color,
+            backgroundColor: color.withValues(alpha: 0.12),
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<Map<String, dynamic>> mapSource() {
+    return areas
+        .whereType<Map>()
+        .map<Map<String, dynamic>>(
+          (area) => Map<String, dynamic>.from(area),
+        )
+        .toList();
   }
 
   List<Marker> buildMarkers() {
     return mapSource().map<Marker>((area) {
-      final lat = ((area["lat"] ?? 6.9010) as num).toDouble();
-      final lng = ((area["lng"] ?? 79.8700) as num).toDouble();
+      final latValue = area["lat"];
+      final lngValue = area["lng"];
+
+      if (latValue is! num || lngValue is! num) {
+        return const Marker(
+          point: LatLng(6.9010, 79.8700),
+          width: 0,
+          height: 0,
+          child: SizedBox.shrink(),
+        );
+      }
 
       return Marker(
-        point: LatLng(lat, lng),
+        point: LatLng(
+          latValue.toDouble(),
+          lngValue.toDouble(),
+        ),
         width: 44,
         height: 44,
         child: mohMarker(area),
