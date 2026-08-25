@@ -2,270 +2,98 @@ import 'package:flutter/material.dart';
 import 'dashboard_screen.dart';
 import 'recommendation_screen.dart';
 import 'phi_warning_screen.dart';
-import 'about_screen.dart';
+import 'warning_history_screen.dart';
+import 'intervention_feedback_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
-  void openScreen(BuildContext context, Widget screen) {
+  static const _background = Color(0xFFF7F8FA);
+  static const _ink = Color(0xFF172033);
+  static const _muted = Color(0xFF6B7280);
+  static const _red = Color(0xFFE53935);
+
+  void _open(BuildContext context, Widget screen) {
     Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
   }
-
-  static const Color bg = Color(0xFFF8FAFC);
-  static const Color card = Colors.white;
-  static const Color border = Color(0xFFE5E7EB);
-  static const Color title = Color(0xFF111827);
-  static const Color sub = Color(0xFF6B7280);
-  static const Color red = Color(0xFFE53935);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bg,
+      backgroundColor: _background,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(18, 18, 18, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _topBar(),
-              const SizedBox(height: 22),
-              _welcomeCard(),
-              const SizedBox(height: 24),
-              const Text(
-                'Main Menu',
-                style: TextStyle(
-                  color: title,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 5),
-              const Text(
-                'Choose a function to continue',
-                style: TextStyle(color: sub, fontSize: 13),
-              ),
-              const SizedBox(height: 16),
-              _menuCard(
-                context,
-                icon: Icons.dashboard_rounded,
-                title: 'Dashboard',
-                subtitle:
-                    'View research summary, progress, dataset, and system flow.',
-                color: Colors.lightBlue,
-                screen: const DashboardScreen(),
-              ),
-              _menuCard(
-                context,
-                icon: Icons.psychology_alt_rounded,
-                title: 'AI Recommendation',
-                subtitle: 'Enter dengue data and get best intervention action.',
-                color: red,
-                screen: const RecommendationScreen(),
-              ),
-              _menuCard(
-                context,
-                icon: Icons.local_police_rounded,
-                title: 'PHI Warning System',
-                subtitle: 'Send warning email for high-risk dengue situations.',
-                color: Colors.orange,
-                screen: const PHIWarningScreen(),
-              ),
-              _menuCard(
-                context,
-                icon: Icons.info_outline_rounded,
-                title: 'About Project',
-                subtitle:
-                    'View research details, component purpose, and future work.',
-                color: Colors.green,
-                screen: const AboutScreen(),
-              ),
-            ],
-          ),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(18, 20, 18, 28),
+          children: [
+            _header(),
+            const SizedBox(height: 22),
+            _noticeCard(),
+            const SizedBox(height: 28),
+            const Text('Operations', style: TextStyle(fontSize: 23, fontWeight: FontWeight.w900, color: _ink)),
+            const SizedBox(height: 5),
+            const Text('Select a task to support dengue response activities.', style: TextStyle(color: _muted, fontSize: 13)),
+            const SizedBox(height: 17),
+            _menuCard(context, icon: Icons.dashboard_rounded, title: 'Operations Dashboard', subtitle: 'Review current alerts, activity, and area information.', color: Color(0xFF0284C7), screen: const DashboardScreen()),
+            _menuCard(context, icon: Icons.analytics_rounded, title: 'Risk Assessment', subtitle: 'Assess an MOH area and view recommended actions.', color: _red, screen: const RecommendationScreen()),
+            _menuCard(context, icon: Icons.notifications_active_rounded, title: 'PHI Alerts', subtitle: 'Review and send high-risk dengue alerts to PHI officers.', color: Color(0xFFF59E0B), screen: const PHIWarningScreen()),
+            _menuCard(context, icon: Icons.history_rounded, title: 'Alert History', subtitle: 'View saved alerts and email delivery status.', color: Color(0xFF7C3AED), screen: const WarningHistoryScreen()),
+            _menuCard(context, icon: Icons.loop_rounded, title: 'Intervention Follow-up', subtitle: 'Record PHI outcomes to improve future decisions.', color: Color(0xFF4F46E5), screen: const InterventionFeedbackScreen()),
+          ],
         ),
       ),
     );
   }
 
-  Widget _topBar() {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(11),
-          decoration: BoxDecoration(
-            color: red.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: const Icon(
-            Icons.health_and_safety_rounded,
-            color: red,
-            size: 28,
-          ),
-        ),
-        const SizedBox(width: 12),
-        const Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Dengue RL Agent',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                  color: title,
-                ),
-              ),
-              SizedBox(height: 3),
-              Text(
-                'Mobile Decision Support System',
-                style: TextStyle(fontSize: 13, color: sub),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
+  Widget _header() => Row(children: [
+        Container(width: 52, height: 52, decoration: BoxDecoration(color: _red.withValues(alpha: .12), borderRadius: BorderRadius.circular(16)), child: const Icon(Icons.health_and_safety_rounded, color: _red, size: 29)),
+        const SizedBox(width: 13),
+        const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Dengue Response', style: TextStyle(color: _ink, fontSize: 22, fontWeight: FontWeight.w900)),
+          SizedBox(height: 3),
+          Text('PHI and MOH decision support', style: TextStyle(color: _muted, fontSize: 13)),
+        ])),
+      ]);
 
-  Widget _welcomeCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFF6B6B), Color(0xFFE53935), Color(0xFFFFA39E)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+  Widget _noticeCard() => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(colors: [Color(0xFFE53935), Color(0xFFFF746F)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+          borderRadius: BorderRadius.circular(25),
+          boxShadow: [BoxShadow(color: _red.withValues(alpha: .18), blurRadius: 18, offset: const Offset(0, 9))],
         ),
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: red.withValues(alpha: 0.20),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: -16,
-            top: -18,
-            child: Icon(
-              Icons.coronavirus_rounded,
-              size: 115,
-              color: Colors.white.withValues(alpha: 0.16),
-            ),
-          ),
-          const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '🦟 Dengue Intervention\nOptimization Agent',
-                style: TextStyle(
-                  fontSize: 28,
-                  height: 1.18,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                ),
-              ),
-              SizedBox(height: 12),
-              Text(
-                'AI-powered mobile application for recommending dengue control interventions using Reinforcement Learning.',
-                style: TextStyle(
-                  fontSize: 14.5,
-                  height: 1.45,
-                  color: Colors.white,
-                ),
-              ),
-              SizedBox(height: 18),
-              Row(
-                children: [
-                  Icon(Icons.verified_rounded, color: Colors.white, size: 22),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Q-Learning based decision support',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+        child: const Row(children: [
+          Icon(Icons.shield_rounded, color: Colors.white, size: 34),
+          SizedBox(width: 14),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Dengue response support', style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w900)),
+            SizedBox(height: 5),
+            Text('Assess local risk, coordinate PHI alerts, and record intervention outcomes.', style: TextStyle(color: Colors.white, height: 1.35)),
+          ])),
+        ]),
+      );
 
-  Widget _menuCard(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required Widget screen,
-  }) {
+  Widget _menuCard(BuildContext context, {required IconData icon, required String title, required String subtitle, required Color color, required Widget screen}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(24),
-        onTap: () => openScreen(context, screen),
-        child: Ink(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: card,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: border),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 14,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Icon(icon, color: color, size: 32),
-              ),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(22),
+          onTap: () => _open(context, screen),
+          child: Container(
+            padding: const EdgeInsets.all(17),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: const Color(0xFFE5E7EB))),
+            child: Row(children: [
+              Container(width: 54, height: 54, decoration: BoxDecoration(color: color.withValues(alpha: .12), borderRadius: BorderRadius.circular(17)), child: Icon(icon, color: color, size: 29)),
               const SizedBox(width: 15),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: HomeScreen.title,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        color: sub,
-                        fontSize: 13,
-                        height: 1.35,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.arrow_forward_ios_rounded, color: sub, size: 17),
-            ],
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(title, style: const TextStyle(color: _ink, fontSize: 17, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 5),
+                Text(subtitle, style: const TextStyle(color: _muted, fontSize: 13, height: 1.35)),
+              ])),
+              const Icon(Icons.chevron_right_rounded, color: _muted, size: 27),
+            ]),
           ),
         ),
       ),

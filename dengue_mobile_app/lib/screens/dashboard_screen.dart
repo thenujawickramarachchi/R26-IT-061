@@ -1,412 +1,233 @@
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
-  static const Color bg = Color(0xFFF8FAFC);
-  static const Color card = Colors.white;
-  static const Color border = Color(0xFFE5E7EB);
-  static const Color title = Color(0xFF111827);
-  static const Color sub = Color(0xFF6B7280);
-  static const Color red = Color(0xFFE53935);
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  static const _background = Color(0xFFF7F8FA);
+  static const _ink = Color(0xFF172033);
+  static const _muted = Color(0xFF6B7280);
+  static const _red = Color(0xFFE53935);
+
+  bool _loading = true;
+  String? _error;
+  List<Map<String, dynamic>> _warnings = [];
+  List<String> _areas = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboard();
+  }
+
+  Future<void> _loadDashboard() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final results = await Future.wait([
+        ApiService.getWarningHistory(limit: 20),
+        ApiService.getMohAreas(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _warnings = results[0] as List<Map<String, dynamic>>;
+        _areas = results[1] as List<String>;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'Dashboard data is unavailable. Check the backend connection and refresh.';
+      });
+    }
+  }
+
+  bool _isHigh(Map<String, dynamic> warning) =>
+      '${warning['risk_level']}'.toUpperCase() == 'HIGH';
+
+  bool _emailSent(Map<String, dynamic> warning) {
+    final value = warning['email_sent'];
+    return value == true || '$value'.toLowerCase() == 'true';
+  }
+
+  String _text(dynamic value, [String fallback = 'Not available']) {
+    final text = '$value';
+    return value == null || text == 'null' || text.isEmpty ? fallback : text;
+  }
+
+  String _dateText(dynamic value) {
+    final parsed = DateTime.tryParse('$value')?.toLocal();
+    if (parsed == null) return 'Recent';
+    final month = _monthName(parsed.month);
+    return '${parsed.day} $month, ${parsed.hour.toString().padLeft(2, '0')}:${parsed.minute.toString().padLeft(2, '0')}';
+  }
+
+  String _monthName(int month) {
+    const names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return names[month - 1];
+  }
 
   @override
   Widget build(BuildContext context) {
+    final highCount = _warnings.where(_isHigh).length;
+    final sentCount = _warnings.where(_emailSent).length;
+
     return Scaffold(
-      backgroundColor: bg,
-      appBar: AppBar(title: const Text('Dashboard')),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _dashboardHeader(),
-              const SizedBox(height: 18),
-              _statusOverview(),
-              const SizedBox(height: 22),
-              _sectionTitle(
-                titleText: 'Research Summary',
-                subtitleText: 'Current component information',
-              ),
+      backgroundColor: _background,
+      appBar: AppBar(
+        backgroundColor: _background,
+        foregroundColor: _ink,
+        elevation: 0,
+        centerTitle: true,
+        title: const Text('Operations Dashboard', style: TextStyle(fontWeight: FontWeight.w800)),
+        actions: [
+          IconButton(onPressed: _loadDashboard, icon: const Icon(Icons.refresh_rounded), tooltip: 'Refresh'),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: _loadDashboard,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(18, 10, 18, 30),
+          children: [
+            _hero(),
+            const SizedBox(height: 20),
+            if (_loading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 70),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_error != null)
+              _errorCard()
+            else ...[
+              const Text('Current activity', style: TextStyle(color: _ink, fontSize: 21, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 4),
+              const Text('Live summary from warning and MOH records.', style: TextStyle(color: _muted, fontSize: 13)),
               const SizedBox(height: 14),
-              _researchSummaryCard(),
-              const SizedBox(height: 22),
-              _sectionTitle(
-                titleText: 'Prototype Progress',
-                subtitleText: 'Current 50% to 60% progress status',
-              ),
+              Row(children: [
+                Expanded(child: _metric('$highCount', 'High-risk alerts', Icons.warning_amber_rounded, _red)),
+                const SizedBox(width: 10),
+                Expanded(child: _metric('$sentCount', 'Emails sent', Icons.mark_email_read_rounded, const Color(0xFF16A34A))),
+                const SizedBox(width: 10),
+                Expanded(child: _metric('${_areas.length}', 'MOH areas', Icons.location_city_rounded, const Color(0xFF0284C7))),
+              ]),
+              const SizedBox(height: 27),
+              const Text('Recent alerts', style: TextStyle(color: _ink, fontSize: 21, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 4),
+              const Text('Most recent warning records saved by the system.', style: TextStyle(color: _muted, fontSize: 13)),
               const SizedBox(height: 14),
-              _progressCard(),
-              const SizedBox(height: 22),
-              _sectionTitle(
-                titleText: 'System Flow',
-                subtitleText: 'How the mobile app connects with AI backend',
-              ),
+              if (_warnings.isEmpty) _emptyState() else ..._warnings.take(4).map(_alertCard),
               const SizedBox(height: 14),
-              _flowCard(),
+              _dataNotice(),
             ],
-          ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _dashboardHeader() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFF6B6B), Color(0xFFE53935), Color(0xFFFFA39E)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+  Widget _hero() => Container(
+        padding: const EdgeInsets.all(21),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(25),
+          gradient: const LinearGradient(colors: [Color(0xFFE53935), Color(0xFFFF746F)]),
+          boxShadow: [BoxShadow(color: _red.withValues(alpha: .18), blurRadius: 18, offset: const Offset(0, 9))],
         ),
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: red.withValues(alpha: 0.20),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: -15,
-            top: -15,
-            child: Icon(
-              Icons.coronavirus_rounded,
-              size: 110,
-              color: Colors.white.withValues(alpha: 0.16),
-            ),
-          ),
-          const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Dengue RL Agent\nDashboard',
-                style: TextStyle(
-                  fontSize: 28,
-                  height: 1.18,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                ),
-              ),
-              SizedBox(height: 12),
-              Text(
-                'Overview of AI method, dataset, backend connection, and prototype progress.',
-                style: TextStyle(
-                  fontSize: 14.5,
-                  height: 1.45,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+        child: const Row(children: [
+          Icon(Icons.monitor_heart_rounded, color: Colors.white, size: 39),
+          SizedBox(width: 15),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Dengue response overview', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 21)),
+            SizedBox(height: 6),
+            Text('Monitor risk alerts, PHI email delivery, and area coverage.', style: TextStyle(color: Colors.white, height: 1.35)),
+          ])),
+        ]),
+      );
 
-  Widget _statusOverview() {
-    return Row(
-      children: [
-        Expanded(
-          child: _statusCard(
-            value: '708',
-            label: 'Weeks Data',
-            icon: Icons.dataset_rounded,
-            color: Colors.lightBlue,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _statusCard(
-            value: '3000',
-            label: 'Episodes',
-            icon: Icons.auto_graph_rounded,
-            color: Colors.orange,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _statusCard(
-            value: '12',
-            label: 'MOH Areas',
-            icon: Icons.location_city_rounded,
-            color: Colors.green,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _statusCard({
-    required String value,
-    required String label,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: card,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(9),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: Icon(icon, color: color, size: 23),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-              color: title,
-            ),
-          ),
+  Widget _metric(String value, String label, IconData icon, Color color) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 8),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(19), border: Border.all(color: const Color(0xFFE5E7EB))),
+        child: Column(children: [
+          Icon(icon, color: color, size: 25),
+          const SizedBox(height: 8),
+          Text(value, style: const TextStyle(color: _ink, fontWeight: FontWeight.w900, fontSize: 21)),
           const SizedBox(height: 3),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 11.5, color: sub),
-          ),
-        ],
-      ),
-    );
-  }
+          Text(label, textAlign: TextAlign.center, style: const TextStyle(color: _muted, fontSize: 10.5, height: 1.2)),
+        ]),
+      );
 
-  Widget _sectionTitle({
-    required String titleText,
-    required String subtitleText,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          titleText,
-          style: const TextStyle(
-            fontSize: 21,
-            fontWeight: FontWeight.w900,
-            color: title,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(subtitleText, style: const TextStyle(color: sub, fontSize: 13)),
-      ],
-    );
-  }
-
-  Widget _researchSummaryCard() {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: card,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: border),
-      ),
-      child: Column(
-        children: [
-          _summaryRow(
-            icon: Icons.memory_rounded,
-            titleText: 'AI Method',
-            value: 'Q-Learning RL',
-            color: Colors.purple,
-          ),
-          const Divider(color: border, height: 24),
-          _summaryRow(
-            icon: Icons.mobile_friendly_rounded,
-            titleText: 'Frontend',
-            value: 'Flutter App',
-            color: Colors.lightBlue,
-          ),
-          const Divider(color: border, height: 24),
-          _summaryRow(
-            icon: Icons.api_rounded,
-            titleText: 'Backend',
-            value: 'Python Flask API',
-            color: Colors.green,
-          ),
-          const Divider(color: border, height: 24),
-          _summaryRow(
-            icon: Icons.email_rounded,
-            titleText: 'Special Feature',
-            value: 'PHI Email Alert',
-            color: Colors.orange,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _summaryRow({
-    required IconData icon,
-    required String titleText,
-    required String value,
-    required Color color,
-  }) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Icon(icon, color: color, size: 22),
-        ),
-        const SizedBox(width: 13),
-        Expanded(
-          child: Text(
-            titleText,
-            style: const TextStyle(color: sub, fontSize: 14),
-          ),
-        ),
-        Text(
-          value,
-          style: const TextStyle(
-            color: title,
-            fontWeight: FontWeight.w900,
-            fontSize: 14,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _progressCard() {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: card,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.task_alt_rounded, color: Colors.green, size: 26),
-              SizedBox(width: 10),
-              Text(
-                'Working Prototype',
-                style: TextStyle(
-                  color: title,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: LinearProgressIndicator(
-              value: 0.60,
-              minHeight: 10,
-              backgroundColor: const Color(0xFFE5E7EB),
-              valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
-            ),
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            'Current progress: 60% prototype demo ready',
-            style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 14),
-          _bulletText('RL model connected with backend'),
-          _bulletText('Mobile app connected through API'),
-          _bulletText('Recommendation and HIGH risk alert working'),
-          _bulletText(
-            'Next phase: database, automation, area-wise PHI mapping',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _flowCard() {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: card,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _flowItem('1', 'User enters dengue situation data'),
-          _flowArrow(),
-          _flowItem('2', 'Flutter app sends data to Flask backend'),
-          _flowArrow(),
-          _flowItem('3', 'Q-Learning model recommends best intervention'),
-          _flowArrow(),
-          _flowItem('4', 'HIGH risk triggers PHI warning email'),
-        ],
-      ),
-    );
-  }
-
-  Widget _flowItem(String number, String text) {
-    return Row(
-      children: [
-        CircleAvatar(
-          radius: 15,
-          backgroundColor: red.withValues(alpha: 0.12),
-          child: Text(
-            number,
-            style: const TextStyle(color: red, fontWeight: FontWeight.bold),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(text, style: const TextStyle(color: sub, height: 1.4)),
-        ),
-      ],
-    );
-  }
-
-  Widget _flowArrow() {
-    return const Padding(
-      padding: EdgeInsets.only(left: 14, top: 6, bottom: 6),
-      child: Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF9CA3AF)),
-    );
-  }
-
-  Widget _bulletText(String text) {
+  Widget _alertCard(Map<String, dynamic> warning) {
+    final high = _isHigh(warning);
+    final sent = _emailSent(warning);
+    final area = _text(warning['moh_area_name'], _text(warning['area'], 'MOH area'));
     return Padding(
-      padding: const EdgeInsets.only(bottom: 7),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('• ', style: TextStyle(color: sub, fontSize: 15)),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(color: sub, height: 1.35, fontSize: 13.5),
-            ),
-          ),
-        ],
+      padding: const EdgeInsets.only(bottom: 11),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFE5E7EB))),
+        child: Row(children: [
+          Container(width: 44, height: 44, decoration: BoxDecoration(color: (high ? _red : const Color(0xFFF59E0B)).withValues(alpha: .12), borderRadius: BorderRadius.circular(14)), child: Icon(high ? Icons.warning_rounded : Icons.info_outline_rounded, color: high ? _red : const Color(0xFFF59E0B))),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(area, style: const TextStyle(color: _ink, fontSize: 16, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 3),
+            Text(_text(warning['recommended_action']), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _muted, fontSize: 13)),
+            const SizedBox(height: 4),
+            Text(_dateText(warning['created_at']), style: const TextStyle(color: _muted, fontSize: 11.5)),
+          ])),
+          const SizedBox(width: 8),
+          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            _pill(_text(warning['risk_level'], 'UNKNOWN'), high ? _red : const Color(0xFFF59E0B)),
+            const SizedBox(height: 7),
+            Icon(sent ? Icons.mark_email_read_rounded : Icons.email_outlined, color: sent ? const Color(0xFF16A34A) : _muted, size: 20),
+          ]),
+        ]),
       ),
     );
   }
+
+  Widget _pill(String label, Color color) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        decoration: BoxDecoration(color: color.withValues(alpha: .12), borderRadius: BorderRadius.circular(20)),
+        child: Text(label.toUpperCase(), style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 10)),
+      );
+
+  Widget _emptyState() => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFE5E7EB))),
+        child: const Row(children: [
+          Icon(Icons.history_toggle_off_rounded, color: _muted),
+          SizedBox(width: 12),
+          Expanded(child: Text('No alert records have been saved yet.', style: TextStyle(color: _muted))),
+        ]),
+      );
+
+  Widget _errorCard() => Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(color: const Color(0xFFFFF1F2), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFFECACA))),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Row(children: [Icon(Icons.wifi_off_rounded, color: _red), SizedBox(width: 9), Text('Dashboard unavailable', style: TextStyle(color: _ink, fontWeight: FontWeight.w800))]),
+          const SizedBox(height: 8),
+          Text(_error!, style: const TextStyle(color: _muted, height: 1.35)),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(onPressed: _loadDashboard, icon: const Icon(Icons.refresh), label: const Text('Try again')),
+        ]),
+      );
+
+  Widget _dataNotice() => Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(17)),
+        child: const Row(children: [
+          Icon(Icons.info_outline_rounded, color: Color(0xFF0284C7)),
+          SizedBox(width: 10),
+          Expanded(child: Text('Pull down or use Refresh to load the latest backend records.', style: TextStyle(color: Color(0xFF1E3A5F), fontSize: 12.5, height: 1.3))),
+        ]),
+      );
 }

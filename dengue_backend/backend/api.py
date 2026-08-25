@@ -17,7 +17,7 @@ app = Flask(__name__)
 CORS(app)
 
 SYSTEM_NAME = "Dengue RL Intervention Optimization Agent"
-VERSION = "Prototype v0.6"
+VERSION = "Prototype v0.7"
 
 ACTIONS = [
     "Monitor Only",
@@ -31,6 +31,10 @@ SENDER_EMAIL = os.getenv("SENDER_EMAIL")
 SENDER_PASSWORD = os.getenv("SENDER_PASSWORD")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+Q_TABLE_PATH = os.getenv("Q_TABLE_PATH", "q_table_real.npy")
+RL_LEARNING_RATE = float(os.getenv("RL_LEARNING_RATE", "0.10"))
+RL_DISCOUNT_FACTOR = float(os.getenv("RL_DISCOUNT_FACTOR", "0.90"))
+RL_REWARD_SCALE = float(os.getenv("RL_REWARD_SCALE", "10.0"))
 
 supabase_client = None
 
@@ -49,7 +53,7 @@ except Exception as e:
 
 
 try:
-    q_table = np.load("q_table_real.npy", allow_pickle=True)
+    q_table = np.load(Q_TABLE_PATH, allow_pickle=True)
     print("Q-table loaded successfully:", q_table.shape)
 except Exception as e:
     q_table = None
@@ -153,7 +157,280 @@ def save_warning_history(
 
     except Exception as e:
         print("Warning history save error:", str(e))
+def get_warning_history_from_db(limit=20):
+    """Load saved PHI warning records from Supabase."""
+    if supabase_client is None:
+        return None, "Supabase is not connected."
 
+    try:
+        result = (
+            supabase_client.table("warning_history")
+            .select(
+                "id, dengue_cases, rainfall_mm, temperature_c, risk_level, "
+                "recommended_action, recipient_email, email_sent, email_message, "
+                "created_at, moh_areas(name), phi_officers(full_name)"
+            )
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+
+        history = []
+
+        for row in result.data:
+            area = row.pop("moh_areas", None) or {}
+            officer = row.pop("phi_officers", None) or {}
+
+            row["moh_area_name"] = area.get("name", "Unknown area")
+            row["phi_officer_name"] = officer.get(
+                "full_name",
+                "Not assigned",
+            )
+
+            history.append(row)
+
+        return history, None
+
+    except Exception as e:
+        print("Warning history database lookup error:", str(e))
+        return None, f"Database lookup failed: {str(e)}"
+
+
+def get_warning_for_feedback(warning_history_id):
+    """Load the original warning state used for a PHI outcome feedback record."""
+    if supabase_client is None:
+        return None, "Supabase is not connected."
+
+    try:
+        result = (
+            supabase_client.table("warning_history")
+            .select(
+                "id, moh_area_id, phi_officer_id, dengue_cases, rainfall_mm, "
+                "temperature_c, recommended_action"
+            )
+            .eq("id", warning_history_id)
+            .limit(1)
+            .execute()
+        )
+
+        if not result.data:
+            return None, "Warning history record was not found."
+
+        return result.data[0], None
+
+    except Exception as e:
+        print("Feedback warning lookup error:", str(e))
+        return None, f"Database lookup failed: {str(e)}"
+
+
+def calculate_feedback_reward(cases_before, cases_after, outcome_status):
+    """Calculate a bounded reward from the observed case change and PHI outcome."""
+    if cases_before <= 0:
+        case_change_ratio = 0.0
+    else:
+        case_change_ratio = (cases_before - cases_after) / cases_before
+
+    outcome_adjustment = {
+        "improved": 1.0,
+        "no_change": 0.0,
+        "worsened": -1.0,
+    }.get(outcome_status, 0.0)
+
+    reward = (RL_REWARD_SCALE * case_change_ratio) + outcome_adjustment
+    return round(max(-RL_REWARD_SCALE, min(RL_REWARD_SCALE, reward)), 2)
+
+
+def update_q_table_from_feedback(
+    cases_before,
+    cases_after,
+    rainfall,
+    temperature,
+    intervention_action,
+    reward,
+):
+    """Apply one Q-learning update and persist the updated Q-table."""
+    global q_table
+
+    if q_table is None:
+        return False, "Q-table is not loaded.", None
+
+    if intervention_action not in ACTIONS:
+        return False, "Feedback action does not match a valid RL action.", None
+
+    try:
+        action_index = ACTIONS.index(intervention_action)
+        current_case_level, rain_level, temperature_level = get_levels(
+            cases_before,
+            rainfall,
+            temperature,
+        )
+        next_case_level, next_rain_level, next_temperature_level = get_levels(
+            cases_after,
+            rainfall,
+            temperature,
+        )
+
+        if len(q_table.shape) == 4:
+            old_q_value = float(
+                q_table[
+                    current_case_level,
+                    rain_level,
+                    temperature_level,
+                    action_index,
+                ]
+            )
+            next_max_q = float(
+                np.max(
+                    q_table[
+                        next_case_level,
+                        next_rain_level,
+                        next_temperature_level,
+                    ]
+                )
+            )
+            new_q_value = old_q_value + RL_LEARNING_RATE * (
+                reward + (RL_DISCOUNT_FACTOR * next_max_q) - old_q_value
+            )
+            q_table[
+                current_case_level,
+                rain_level,
+                temperature_level,
+                action_index,
+            ] = new_q_value
+
+        elif len(q_table.shape) == 2:
+            current_state = (
+                current_case_level * 9
+                + rain_level * 3
+                + temperature_level
+            )
+            next_state = (
+                next_case_level * 9
+                + next_rain_level * 3
+                + next_temperature_level
+            )
+
+            if action_index >= q_table.shape[1]:
+                return False, "Q-table action count does not match RL actions.", None
+
+            old_q_value = float(q_table[current_state, action_index])
+            next_max_q = float(np.max(q_table[next_state]))
+            new_q_value = old_q_value + RL_LEARNING_RATE * (
+                reward + (RL_DISCOUNT_FACTOR * next_max_q) - old_q_value
+            )
+            q_table[current_state, action_index] = new_q_value
+
+        else:
+            return False, "Unsupported Q-table structure.", None
+
+        np.save(Q_TABLE_PATH, q_table)
+
+        return True, None, {
+            "action": intervention_action,
+            "action_index": action_index,
+            "reward": reward,
+            "old_q_value": round(old_q_value, 6),
+            "new_q_value": round(float(new_q_value), 6),
+            "learning_rate": RL_LEARNING_RATE,
+            "discount_factor": RL_DISCOUNT_FACTOR,
+        }
+
+    except Exception as e:
+        print("Q-table feedback update error:", str(e))
+        return False, f"Q-table update failed: {str(e)}", None
+
+
+def save_intervention_feedback(
+    warning,
+    cases_after,
+    follow_up_days,
+    outcome_status,
+    feedback_notes,
+    reward,
+):
+    if supabase_client is None:
+        return None, "Supabase is not connected."
+
+    try:
+        result = (
+            supabase_client.table("intervention_feedback")
+            .insert(
+                {
+                    "warning_history_id": warning["id"],
+                    "moh_area_id": warning["moh_area_id"],
+                    "phi_officer_id": warning.get("phi_officer_id"),
+                    "intervention_action": warning["recommended_action"],
+                    "cases_before": warning["dengue_cases"],
+                    "cases_after": cases_after,
+                    "follow_up_days": follow_up_days,
+                    "outcome_status": outcome_status,
+                    "feedback_notes": feedback_notes,
+                    "reward": reward,
+                    "q_table_updated": False,
+                }
+            )
+            .execute()
+        )
+
+        if not result.data:
+            return None, "Feedback record could not be saved."
+
+        return result.data[0], None
+
+    except Exception as e:
+        print("Feedback database save error:", str(e))
+        return None, f"Database save failed: {str(e)}"
+
+
+def mark_feedback_q_table_updated(feedback_id):
+    if supabase_client is None:
+        return "Supabase is not connected."
+
+    try:
+        (
+            supabase_client.table("intervention_feedback")
+            .update({"q_table_updated": True})
+            .eq("id", feedback_id)
+            .execute()
+        )
+        return None
+
+    except Exception as e:
+        print("Feedback Q-table status update error:", str(e))
+        return f"Could not update feedback status: {str(e)}"
+
+
+def get_feedback_history_from_db(limit=20):
+    if supabase_client is None:
+        return None, "Supabase is not connected."
+
+    try:
+        result = (
+            supabase_client.table("intervention_feedback")
+            .select(
+                "id, warning_history_id, intervention_action, cases_before, "
+                "cases_after, follow_up_days, outcome_status, feedback_notes, "
+                "reward, q_table_updated, submitted_at, moh_areas(name), "
+                "phi_officers(full_name)"
+            )
+            .order("submitted_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+
+        feedback_items = []
+        for row in result.data:
+            area = row.pop("moh_areas", None) or {}
+            officer = row.pop("phi_officers", None) or {}
+            row["moh_area_name"] = area.get("name", "Unknown area")
+            row["phi_officer_name"] = officer.get("full_name", "Not assigned")
+            feedback_items.append(row)
+
+        return feedback_items, None
+
+    except Exception as e:
+        print("Feedback history database lookup error:", str(e))
+        return None, f"Database lookup failed: {str(e)}"
 
 def validate_input(area, cases, rainfall, temperature):
     errors = []
@@ -445,6 +722,9 @@ def home():
                 "/test-email",
                 "/sample/high-risk",
                 "/moh-areas",
+                "/warning-history",
+                "/submit-feedback",
+                "/feedback-history",
             ],
         }
     )
@@ -483,7 +763,62 @@ def moh_areas():
             "areas": areas,
         }
     )
+@app.route("/warning-history", methods=["GET"])
+def warning_history():
+    try:
+        limit = int(request.args.get("limit", 20))
+        limit = max(1, min(limit, 100))
+    except ValueError:
+        return jsonify(
+            {
+                "success": False,
+                "message": "Limit must be a number.",
+            }
+        ), 400
 
+    history, database_error = get_warning_history_from_db(limit)
+
+    if database_error:
+        return jsonify(
+            {
+                "success": False,
+                "message": database_error,
+            }
+        ), 500
+
+    return jsonify(
+        {
+            "success": True,
+            "count": len(history),
+            "warnings": history,
+        }
+    )
+
+
+@app.route("/feedback-history", methods=["GET"])
+def feedback_history():
+    try:
+        limit = int(request.args.get("limit", 20))
+        limit = max(1, min(limit, 100))
+    except ValueError:
+        return jsonify(
+            {"success": False, "message": "Limit must be a number."}
+        ), 400
+
+    feedback_items, database_error = get_feedback_history_from_db(limit)
+
+    if database_error:
+        return jsonify(
+            {"success": False, "message": database_error}
+        ), 500
+
+    return jsonify(
+        {
+            "success": True,
+            "count": len(feedback_items),
+            "feedback": feedback_items,
+        }
+    )
 
 @app.route("/sample/high-risk", methods=["GET"])
 def sample_high_risk():
@@ -646,6 +981,123 @@ def send_warning():
                 "success": False,
                 "timestamp": current_time(),
                 "message": "Send warning API failed.",
+                "error": str(e),
+            }
+        ), 500
+
+
+@app.route("/submit-feedback", methods=["POST"])
+def submit_feedback():
+    """Save a PHI outcome and use it to update the Q-learning table."""
+    try:
+        data = request.get_json(force=True) or {}
+
+        try:
+            warning_history_id = int(data.get("warning_history_id"))
+            cases_after = int(data.get("cases_after"))
+            follow_up_days = int(data.get("follow_up_days", 14))
+        except (TypeError, ValueError):
+            return jsonify(
+                {
+                    "success": False,
+                    "message": "warning_history_id, cases_after, and follow_up_days must be valid numbers.",
+                }
+            ), 400
+
+        outcome_status = str(data.get("outcome_status", "")).strip().lower()
+        feedback_notes = str(data.get("feedback_notes", "")).strip()
+
+        if warning_history_id <= 0:
+            return jsonify(
+                {"success": False, "message": "warning_history_id must be greater than 0."}
+            ), 400
+
+        if cases_after < 0:
+            return jsonify(
+                {"success": False, "message": "cases_after cannot be negative."}
+            ), 400
+
+        if follow_up_days <= 0:
+            return jsonify(
+                {"success": False, "message": "follow_up_days must be greater than 0."}
+            ), 400
+
+        if outcome_status not in {"improved", "no_change", "worsened"}:
+            return jsonify(
+                {
+                    "success": False,
+                    "message": "outcome_status must be improved, no_change, or worsened.",
+                }
+            ), 400
+
+        warning, database_error = get_warning_for_feedback(warning_history_id)
+        if database_error:
+            return jsonify(
+                {"success": False, "message": database_error}
+            ), 404
+
+        reward = calculate_feedback_reward(
+            warning["dengue_cases"],
+            cases_after,
+            outcome_status,
+        )
+
+        feedback, database_error = save_intervention_feedback(
+            warning=warning,
+            cases_after=cases_after,
+            follow_up_days=follow_up_days,
+            outcome_status=outcome_status,
+            feedback_notes=feedback_notes,
+            reward=reward,
+        )
+
+        if database_error:
+            return jsonify(
+                {"success": False, "message": database_error}
+            ), 500
+
+        q_updated, q_error, q_update_details = update_q_table_from_feedback(
+            cases_before=warning["dengue_cases"],
+            cases_after=cases_after,
+            rainfall=float(warning["rainfall_mm"]),
+            temperature=float(warning["temperature_c"]),
+            intervention_action=warning["recommended_action"],
+            reward=reward,
+        )
+
+        status_update_error = None
+        if q_updated:
+            status_update_error = mark_feedback_q_table_updated(feedback["id"])
+            if status_update_error:
+                q_updated = False
+                q_error = status_update_error
+
+        return jsonify(
+            {
+                "success": True,
+                "timestamp": current_time(),
+                "message": "Feedback saved and processed.",
+                "feedback_id": feedback["id"],
+                "warning_history_id": warning_history_id,
+                "area_id": warning["moh_area_id"],
+                "intervention_action": warning["recommended_action"],
+                "cases_before": warning["dengue_cases"],
+                "cases_after": cases_after,
+                "outcome_status": outcome_status,
+                "reward": reward,
+                "q_table_updated": q_updated,
+                "q_table_update": q_update_details,
+                "q_table_update_error": q_error,
+            }
+        ), 201
+
+    except Exception as e:
+        print("Submit feedback API error:", str(e))
+        return jsonify(
+            {
+                "success": False,
+                "timestamp": current_time(),
+                "message": "Feedback API failed.",
                 "error": str(e),
             }
         ), 500

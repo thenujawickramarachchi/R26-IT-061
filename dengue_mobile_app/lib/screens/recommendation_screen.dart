@@ -13,15 +13,20 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
   final TextEditingController casesController = TextEditingController();
 
   String? selectedArea;
-  List<String> areas = [];
-  bool isAreasLoading = true;
-  String? areasLoadError;
   double rainfall = 15.0;
   double temperature = 28.0;
 
   bool isLoading = false;
   Map<String, dynamic>? result;
   String? errorMessage;
+
+  bool isAreaRiskLoading = false;
+  Map<String, dynamic>? areaRiskResult;
+  String? areaRiskError;
+
+  List<String> areas = [];
+  bool isAreasLoading = true;
+  String? areasError;
 
   static const Color bg = Color(0xFFF8FAFC);
   static const Color card = Colors.white;
@@ -37,90 +42,109 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
   }
 
   Future<void> loadMohAreas() async {
+    setState(() {
+      isAreasLoading = true;
+      areasError = null;
+    });
+
     try {
       final loadedAreas = await ApiService.getMohAreas();
 
       if (!mounted) return;
       setState(() {
         areas = loadedAreas;
-        selectedArea = loadedAreas.isNotEmpty ? loadedAreas.first : null;
         isAreasLoading = false;
-        areasLoadError = null;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
+        areasError = 'Cannot load MOH areas. Please try again.';
         isAreasLoading = false;
-        areasLoadError = e.toString();
+      });
+    }
+  }
+
+  Future<void> loadAreaProxyRisk(String area) async {
+    setState(() {
+      isAreaRiskLoading = false;
+      areaRiskResult = null;
+      areaRiskError = null;
+    });
+
+    setState(() => isAreaRiskLoading = true);
+
+    try {
+      final response = await ApiService.getAreaProxyRisk(
+        area: area,
+        year: DateTime.now().year,
+        week: 1,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        areaRiskResult = response;
+        isAreaRiskLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        areaRiskError =
+            'Area proxy-risk preview is currently unavailable for $area.';
+        isAreaRiskLoading = false;
       });
     }
   }
 
   Future<void> getRecommendation() async {
-  if (selectedArea == null) {
-    setState(() {
-      errorMessage = 'Please wait until MOH areas are loaded.';
-    });
-    return;
-  }
+    if (selectedArea == null) {
+      setState(() {
+        errorMessage = 'Please select an MOH area.';
+      });
+      return;
+    }
 
-  if (casesController.text.trim().isEmpty) {
-    setState(() {
-      errorMessage = 'Please enter dengue cases.';
-    });
-    return;
-  }
+    if (casesController.text.trim().isEmpty) {
+      setState(() {
+        errorMessage = 'Please enter dengue cases.';
+      });
+      return;
+    }
 
-  final int? parsedCases = int.tryParse(casesController.text.trim());
+    final int? parsedCases = int.tryParse(casesController.text.trim());
 
-  if (parsedCases == null || parsedCases <= 0) {
-    setState(() {
-      errorMessage = 'Please enter a valid dengue case count greater than 0.';
-    });
-    return;
-  }
+    if (parsedCases == null || parsedCases <= 0) {
+      setState(() {
+        errorMessage = 'Please enter a valid dengue case count greater than 0.';
+      });
+      return;
+    }
 
-  setState(() {
-    isLoading = true;
-    result = null;
-    errorMessage = null;
-  });
-
-  try {
-    final response = await ApiService.getRecommendation(
-      area: selectedArea!,
-      cases: parsedCases,
-      rainfall: rainfall,
-      temperature: temperature,
-    );
+    final int cases = parsedCases;
 
     setState(() {
-      result = response;
-      isLoading = false;
+      isLoading = true;
+      result = null;
+      errorMessage = null;
     });
-  } catch (e) {
-    setState(() {
-      errorMessage = e.toString();
-      isLoading = false;
-    });
-  }
-  }
-  void loadHighRiskSample() {
-  if (areas.isEmpty) {
-    setState(() {
-      errorMessage = 'MOH areas are not loaded yet.';
-    });
-    return;
-  }
 
-  setState(() {
-    selectedArea = areas.first;
-    casesController.text = '6000';
-    rainfall = 20.0;
-    temperature = 28.0;
-    result = null;
-    errorMessage = null;
-  });
+    try {
+      final response = await ApiService.getRecommendation(
+        area: selectedArea!,
+        cases: cases,
+        rainfall: rainfall,
+        temperature: temperature,
+      );
+
+      setState(() {
+        result = response;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        errorMessage = e.toString();
+        isLoading = false;
+      });
+    }
   }
 
   Color riskColor(String risk) {
@@ -172,7 +196,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
 
     return Scaffold(
       backgroundColor: bg,
-      appBar: AppBar(title: const Text('AI Recommendation')),
+      appBar: AppBar(title: const Text('Risk Assessment')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(18),
         child: Column(
@@ -182,23 +206,6 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
             const SizedBox(height: 18),
             _inputCard(),
             const SizedBox(height: 18),
-            OutlinedButton.icon(
-              onPressed: loadHighRiskSample,
-              icon: const Icon(Icons.science_rounded),
-              label: const Text(
-                'LOAD HIGH RISK SAMPLE',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.orange,
-                side: const BorderSide(color: Colors.orange),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
             ElevatedButton.icon(
               onPressed: isLoading ? null : getRecommendation,
               icon: isLoading
@@ -314,7 +321,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
           SizedBox(width: 16),
           Expanded(
             child: Text(
-              'Enter current dengue situation data. The RL agent will recommend the best intervention action.',
+              'Enter current weekly dengue data. The RL agent will recommend the best intervention action.',
               style: TextStyle(color: sub, height: 1.4),
             ),
           ),
@@ -337,38 +344,62 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
             ),
             const SizedBox(height: 8),
             if (isAreasLoading)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(12),
-                  child: CircularProgressIndicator(),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    SizedBox(width: 10),
+                    Text('Loading MOH areas...'),
+                  ],
                 ),
               )
-            else if (areasLoadError != null)
-              Text(
-                'Could not load MOH areas: $areasLoadError',
-                style: const TextStyle(color: Colors.red),
+            else if (areasError != null)
+              _messageCard(
+                icon: Icons.error_outline_rounded,
+                color: Colors.red,
+                titleText: 'MOH Areas Unavailable',
+                message: areasError!,
+              )
+            else if (areas.isEmpty)
+              _messageCard(
+                icon: Icons.info_outline_rounded,
+                color: Colors.orange,
+                titleText: 'No MOH Areas',
+                message: 'No MOH areas are available in the database.',
               )
             else
               DropdownButtonFormField<String>(
                 value: selectedArea,
+                hint: const Text('Select MOH area'),
                 decoration: const InputDecoration(
                   prefixIcon: Icon(Icons.location_on_rounded),
                 ),
                 items: areas
                     .map(
-                      (area) => DropdownMenuItem<String>(
-                        value: area,
-                        child: Text(area),
-                      ),
+                      (area) =>
+                          DropdownMenuItem(value: area, child: Text(area)),
                     )
                     .toList(),
                 onChanged: (value) {
-                  setState(() => selectedArea = value);
+                  if (value == null) return;
+                  setState(() {
+                    selectedArea = value;
+                    result = null;
+                    errorMessage = null;
+                  });
+                  loadAreaProxyRisk(value);
                 },
               ),
+            const SizedBox(height: 12),
+            _areaRiskPreviewCard(),
             const SizedBox(height: 18),
             const Text(
-              'Dengue Cases',
+              'Weekly Reported Dengue Cases',
               style: TextStyle(fontWeight: FontWeight.bold, color: title),
             ),
             const SizedBox(height: 8),
@@ -377,7 +408,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               decoration: const InputDecoration(
-                hintText: 'Example: 6000',
+                hintText: 'Example: 25',
                 prefixIcon: Icon(Icons.bug_report_rounded),
               ),
             ),
@@ -405,6 +436,95 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _areaRiskPreviewCard() {
+    if (isAreaRiskLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: 10),
+            Text('Loading area risk preview...'),
+          ],
+        ),
+      );
+    }
+
+    if (areaRiskError != null) {
+      return _messageCard(
+        icon: Icons.info_outline_rounded,
+        color: Colors.blueGrey,
+        titleText: 'Historical Area Risk Context',
+        message: areaRiskError!,
+      );
+    }
+
+    if (areaRiskResult == null) {
+      return _messageCard(
+        icon: Icons.insights_rounded,
+        color: Colors.blue,
+        titleText: 'Historical Area Risk Context',
+        message: 'Select an MOH area to load its model-based historical risk context.',
+      );
+    }
+
+    final risk =
+        (areaRiskResult!['predicted_area_risk_level'] ?? 'Unknown')
+            .toString()
+            .toUpperCase();
+    final probabilities =
+        Map<String, dynamic>.from(areaRiskResult!['probabilities'] ?? {});
+    final high = probabilities['High'] ?? probabilities['HIGH'] ?? 0;
+    final medium = probabilities['Medium'] ?? probabilities['MEDIUM'] ?? 0;
+    final low = probabilities['Low'] ?? probabilities['LOW'] ?? 0;
+    final color = riskColor(risk);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.30)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.insights_rounded, color: color),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Historical Area Risk Context',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: title),
+                ),
+              ),
+              Text(
+                risk,
+                style: TextStyle(color: color, fontWeight: FontWeight.w900),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'High: $high%   Medium: $medium%   Low: $low%',
+            style: const TextStyle(color: sub, fontSize: 13),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Current situation risk is calculated after you tap Get Recommendation.',
+            style: TextStyle(color: sub, fontSize: 11),
+          ),
+        ],
       ),
     );
   }
