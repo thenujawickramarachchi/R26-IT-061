@@ -530,440 +530,6 @@ class _ExplainScreenState extends State<ExplainScreen> {
     );
   }
 
-  Widget localGlobalComparisonCard() {
-    if (localShap.isEmpty || globalShap.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    final validLocal = localShap.where((item) {
-      return item is Map && item["label"] != null && item["shap_value"] is num;
-    }).toList();
-
-    final validGlobal = globalShap.where((item) {
-      return item is Map &&
-          item["feature"] != null &&
-          item["importance"] is num;
-    }).toList();
-
-    if (validLocal.isEmpty || validGlobal.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    final localFeatures =
-        validLocal.map((item) => item["label"].toString()).toSet();
-
-    final globalFeatures =
-        validGlobal.map((item) => item["feature"].toString()).toSet();
-
-    final commonFeatures = localFeatures.intersection(globalFeatures).toList();
-
-    if (commonFeatures.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return SoftCard(
-      color: Colors.white,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // HEADER
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [
-                      Color(0xFFF1F0FF),
-                      Color(0xFFE7E5FF),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Icon(
-                  Icons.compare_arrows_rounded,
-                  color: Color(0xFF5B4BFF),
-                  size: 23,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Local vs Global Analysis",
-                      style: TextStyle(
-                        color: Color(0xFF172033),
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    SizedBox(height: 3),
-                    Text(
-                      "Current prediction vs overall model",
-                      style: TextStyle(
-                        color: Color(0xFF7E8A9D),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 18),
-
-          // EXPLANATION BOX
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(13),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF6F7FC),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(
-                  Icons.info_outline_rounded,
-                  color: Color(0xFF5B4BFF),
-                  size: 18,
-                ),
-                const SizedBox(width: 9),
-                Expanded(
-                  child: Text(
-                    "Compare each feature's current prediction impact with its overall importance in the trained model.",
-                    style: TextStyle(
-                      color: const Color(0xFF65758E),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      height: 1.45,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 18),
-
-          // COMPARISON
-          SizedBox(
-            height: 235,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: _comparisonColumn(
-                        title: "Local SHAP",
-                        subtitle: "Current prediction",
-                        icon: Icons.person_pin,
-                        features: commonFeatures.map((feature) {
-                          final item = validLocal.firstWhere(
-                            (element) => element["label"].toString() == feature,
-                          );
-
-                          final value = (item["shap_value"] as num).toDouble();
-
-                          return _comparisonRow(
-                            feature: feature,
-                            value: value,
-                            displayValue: value.toStringAsFixed(4),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                    const SizedBox(width: 20),
-                    Expanded(
-                      child: _comparisonColumn(
-                        title: "Global SHAP",
-                        subtitle: "Overall model",
-                        icon: Icons.public,
-                        features: commonFeatures.map((feature) {
-                          final item = validGlobal.firstWhere(
-                            (element) =>
-                                element["feature"].toString() == feature,
-                          );
-
-                          final value = (item["importance"] as num).toDouble();
-
-                          return _comparisonRow(
-                            feature: feature,
-                            value: value,
-                            displayValue: value.toStringAsFixed(4),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ],
-                ),
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF5F3FF),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xFF5B4BFF).withValues(
-                        alpha: 0.18,
-                      ),
-                      width: 1,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(
-                          alpha: 0.06,
-                        ),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: const Center(
-                    child: Text(
-                      "VS",
-                      style: TextStyle(
-                        color: Color(0xFF5B4BFF),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _comparisonColumn({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required List<Widget> features,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFD),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: const Color(0xFFE6EBF2),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                icon,
-                size: 18,
-                color: const Color(0xFF5B4BFF),
-              ),
-              const SizedBox(width: 7),
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF172033),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: const TextStyle(
-              fontSize: 10,
-              color: Color(0xFF8A94A6),
-            ),
-          ),
-          const SizedBox(height: 14),
-          ...features,
-        ],
-      ),
-    );
-  }
-
-  Widget _comparisonRow({
-    required String feature,
-    required double value,
-    required String displayValue,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(
-        bottom: 12,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            feature,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF65758E),
-            ),
-          ),
-          const SizedBox(height: 5),
-          Row(
-            children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: LinearProgressIndicator(
-                    value: normalize(
-                      value,
-                      [
-                        {
-                          "importance": value.abs(),
-                        }
-                      ],
-                      "importance",
-                    ),
-                    minHeight: 6,
-                    backgroundColor: const Color(0xFFE7EEF7),
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                      Color(0xFF5B4BFF),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                displayValue,
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF5B4BFF),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _comparisonBox({
-    required String title,
-    required String subtitle,
-    required List<String> items,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: color.withValues(alpha: 0.14),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF172033).withValues(alpha: 0.035),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 9,
-              vertical: 5,
-            ),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.09),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              title,
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.w900,
-                fontSize: 11,
-              ),
-            ),
-          ),
-          const SizedBox(height: 9),
-          Text(
-            subtitle,
-            style: const TextStyle(
-              color: Color(0xFF7E8A9D),
-              fontSize: 10.5,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 14),
-          ...items.asMap().entries.map((entry) {
-            final index = entry.key;
-            final item = entry.value;
-
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: index == items.length - 1 ? 0 : 10,
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 22,
-                    height: 22,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.10),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      "${index + 1}",
-                      style: TextStyle(
-                        color: color,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      item,
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                      style: const TextStyle(
-                        color: Color(0xFF344054),
-                        fontWeight: FontWeight.w800,
-                        fontSize: 11.5,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
-        ],
-      ),
-    );
-  }
-
   Widget globalImportanceCard() {
     if (globalShap.isEmpty) {
       return const SizedBox.shrink();
@@ -1021,7 +587,7 @@ class _ExplainScreenState extends State<ExplainScreen> {
                     ),
                     SizedBox(height: 3),
                     Text(
-                      "Global SHAP analysis",
+                      "SHAP analysis",
                       style: TextStyle(
                         color: Color(0xFF7E8A9D),
                         fontSize: 11,
@@ -1073,7 +639,7 @@ class _ExplainScreenState extends State<ExplainScreen> {
                 SizedBox(width: 9),
                 Expanded(
                   child: Text(
-                    "Global SHAP shows the overall influence of each feature across the trained dengue prediction model.",
+                    "This section shows which environmental factors have the strongest overall influence across the trained dengue prediction model.",
                     style: TextStyle(
                       color: Color(0xFF65758E),
                       fontSize: 11,
@@ -1168,6 +734,148 @@ class _ExplainScreenState extends State<ExplainScreen> {
     );
   }
 
+  Widget overallDistrictRiskCard() {
+    final currentRisk = risk.toUpperCase();
+    final currentRiskColor = riskColor(risk);
+
+    return SoftCard(
+      color: Colors.white,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF4FF),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.location_city_rounded,
+                  color: Color(0xFF5B4BFF),
+                  size: 25,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "COLOMBO DISTRICT",
+                      style: TextStyle(
+                        color: Color(0xFF172033),
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    SizedBox(height: 3),
+                    Text(
+                      "Current Overall Dengue Risk",
+                      style: TextStyle(
+                        color: Color(0xFF7E8A9D),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: currentRiskColor.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: currentRiskColor.withValues(alpha: 0.20),
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "CURRENT AI PREDICTION",
+                        style: TextStyle(
+                          color: Color(0xFF7E8A9D),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.7,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        "$currentRisk RISK",
+                        style: TextStyle(
+                          color: currentRiskColor,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 78,
+                  height: 78,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: currentRiskColor,
+                      width: 4,
+                    ),
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "${confidence.toStringAsFixed(0)}%",
+                          style: TextStyle(
+                            color: currentRiskColor,
+                            fontSize: 19,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const Text(
+                          "Confidence",
+                          style: TextStyle(
+                            color: Color(0xFF7E8A9D),
+                            fontSize: 8,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 15),
+          const Text(
+            "This is the current overall dengue risk prediction for the Colombo District, generated by the deployed machine-learning model.",
+            style: TextStyle(
+              color: Color(0xFF65758E),
+              fontSize: 11,
+              height: 1.45,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget whyHighRiskCard() {
     final topDrivers = localShap
         .where((driver) {
@@ -1216,7 +924,7 @@ class _ExplainScreenState extends State<ExplainScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "AI Explanation",
+                      "Factors Affecting This Risk",
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w900,
@@ -1225,7 +933,7 @@ class _ExplainScreenState extends State<ExplainScreen> {
                     ),
                     SizedBox(height: 3),
                     Text(
-                      "Current prediction • Local SHAP analysis",
+                      "How each factor affected this prediction",
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
@@ -1257,7 +965,7 @@ class _ExplainScreenState extends State<ExplainScreen> {
                     ),
                     SizedBox(width: 5),
                     Text(
-                      "LIVE",
+                      "CURRENT",
                       style: TextStyle(
                         color: Color(0xFF5B4BFF),
                         fontSize: 9,
@@ -1291,7 +999,7 @@ class _ExplainScreenState extends State<ExplainScreen> {
                 SizedBox(width: 9),
                 Expanded(
                   child: Text(
-                    "These factors explain how the Local SHAP analysis influenced the current dengue risk prediction.",
+                    "Positive values increased the risk. Negative values reduced it.",
                     style: TextStyle(
                       color: Color(0xFF667085),
                       fontSize: 11,
@@ -2394,8 +2102,6 @@ class _ExplainScreenState extends State<ExplainScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(22, 16, 22, 100),
             children: [
-              // DELETE OLD HEADER ROW FROM HERE
-
               if (error != null)
                 SoftCard(
                   color: Colors.red.shade50,
@@ -2407,35 +2113,41 @@ class _ExplainScreenState extends State<ExplainScreen> {
 
               const SizedBox(height: 24),
 
+              // 1. CURRENT AI PREDICTION
+              overallDistrictRiskCard()
+                  .animate()
+                  .fade(duration: 700.ms)
+                  .slideY(begin: 0.25, end: 0, duration: 700.ms),
+
+              const SizedBox(height: 16),
+
+              // 2. CURRENT PREDICTION FACTORS
               whyHighRiskCard()
                   .animate(delay: 220.ms)
                   .fade(duration: 700.ms)
                   .slideY(begin: 0.25, end: 0, duration: 700.ms),
 
-              interventionCard()
-                  .animate(delay: 320.ms)
-                  .fade(duration: 700.ms)
-                  .slideY(begin: 0.25, end: 0, duration: 700.ms),
+              const SizedBox(height: 16),
 
-              riskTimelineCard()
+              // 3. OVERALL MODEL FACTORS
+              globalImportanceCard()
                   .animate(delay: 420.ms)
                   .fade(duration: 700.ms)
                   .slideY(begin: 0.25, end: 0, duration: 700.ms),
 
-              localGlobalComparisonCard()
-                  .animate(delay: 520.ms)
-                  .fade(duration: 700.ms)
-                  .slideY(begin: 0.25, end: 0, duration: 700.ms),
+              const SizedBox(height: 16),
 
-              globalImportanceCard()
+              // 4. RECOMMENDED ACTIONS
+              interventionCard()
                   .animate(delay: 620.ms)
                   .fade(duration: 700.ms)
                   .slideY(begin: 0.25, end: 0, duration: 700.ms),
 
               const SizedBox(height: 16),
 
+              // 4. AI TRANSPARENCY
               researchNoteCard()
-                  .animate(delay: 920.ms)
+                  .animate(delay: 620.ms)
                   .fade(duration: 700.ms)
                   .slideY(begin: 0.25, end: 0, duration: 700.ms),
             ],
@@ -2444,4 +2156,4 @@ class _ExplainScreenState extends State<ExplainScreen> {
       ),
     );
   }
-}
+} 
