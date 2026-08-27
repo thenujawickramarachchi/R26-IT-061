@@ -4,6 +4,13 @@ import 'dengue_prediction_screen.dart';
 import 'dashboard_screen.dart';
 import 'trend_screen.dart';
 import 'risk_map_screen.dart';
+
+import 'rl_dashboard_screen.dart';
+import 'recommendation_screen.dart';
+import 'phi_warning_screen.dart';
+import 'warning_history_screen.dart';
+import 'intervention_feedback_screen.dart';
+
 import 'explain_screen.dart';
 import 'notification_screen.dart';
 
@@ -120,6 +127,106 @@ class HomeScreen extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (_) => const RiskMapScreen(),
+                    ),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 16),
+
+              // ============================================================
+              // RL OPERATIONS DASHBOARD
+              // ============================================================
+              _FeatureCard(
+                icon: Icons.monitor_heart_rounded,
+                title: 'RL Operations Dashboard',
+                description:
+                    'Monitor PHI advisory activity, high-risk records, warning email delivery, and MOH-area coverage.',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const RLDashboardScreen(),
+                    ),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 16),
+
+              // ============================================================
+              // RL RECOMMENDATION
+              // ============================================================
+              _FeatureCard(
+                icon: Icons.auto_awesome_rounded,
+                title: 'RL Recommendation',
+                description:
+                    'Assess the current MOH-area dengue situation and receive ranked public-health intervention recommendations from the RL agent.',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const RecommendationScreen(),
+                    ),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 16),
+
+              // ============================================================
+              // PHI WARNING
+              // ============================================================
+              _FeatureCard(
+                icon: Icons.warning_amber_rounded,
+                title: 'PHI Warning',
+                description:
+                    'Assess an MOH-area situation and generate a PHI warning for high-risk dengue conditions.',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const PHIWarningScreen(),
+                    ),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 16),
+
+              // ============================================================
+              // WARNING HISTORY
+              // ============================================================
+              _FeatureCard(
+                icon: Icons.history_rounded,
+                title: 'Warning History',
+                description:
+                    'Review previously generated dengue warnings, risk details, and warning delivery information.',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const WarningHistoryScreen(),
+                    ),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 16),
+
+              // ============================================================
+              // INTERVENTION FEEDBACK
+              // ============================================================
+              _FeatureCard(
+                icon: Icons.rate_review_rounded,
+                title: 'Intervention Feedback',
+                description:
+                    'Record follow-up dengue case outcomes and feedback for previously issued intervention warnings.',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const InterventionFeedbackScreen(),
                     ),
                   );
                 },
