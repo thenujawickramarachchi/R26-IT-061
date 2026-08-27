@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../services/api_service.dart';
 
 class PHIWarningScreen extends StatefulWidget {
@@ -13,7 +14,7 @@ class _PHIWarningScreenState extends State<PHIWarningScreen> {
   static const Color bg = Color(0xFFF8FAFC);
   static const Color title = Color(0xFF111827);
   static const Color sub = Color(0xFF6B7280);
-  static const Color red = Color(0xFFE53935);
+  static const Color red = Color(0xFF2563EB);
 
   final TextEditingController casesController = TextEditingController();
 
@@ -23,10 +24,15 @@ class _PHIWarningScreenState extends State<PHIWarningScreen> {
 
   bool isLoading = false;
   bool isAreasLoading = true;
+  bool isWeatherLoading = false;
 
   Map<String, dynamic>? result;
+  Map<String, dynamic>? weatherResult;
+
   String? errorMessage;
   String? areasError;
+  String? weatherError;
+
   List<String> areas = [];
 
   @override
@@ -61,7 +67,45 @@ class _PHIWarningScreenState extends State<PHIWarningScreen> {
 
       setState(() {
         isAreasLoading = false;
-        areasError = 'Cannot load MOH areas. Please check the backend connection.';
+        areasError =
+            'Cannot load MOH areas. Please check the hosted API connection.';
+      });
+    }
+  }
+
+  double _toDouble(dynamic value, double fallback) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? fallback;
+  }
+
+  Future<void> loadAreaWeather(String area) async {
+    setState(() {
+      isWeatherLoading = true;
+      weatherResult = null;
+      weatherError = null;
+    });
+
+    try {
+      final response = await ApiService.getAreaWeather(area: area);
+
+      final loadedRainfall = _toDouble(response['rainfall'], rainfall);
+      final loadedTemperature = _toDouble(response['temperature'], temperature);
+
+      if (!mounted) return;
+
+      setState(() {
+        weatherResult = response;
+        rainfall = loadedRainfall.clamp(0.0, 150.0).toDouble();
+        temperature = loadedTemperature.clamp(20.0, 40.0).toDouble();
+        isWeatherLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        isWeatherLoading = false;
+        weatherError =
+            'Dataset weather context is unavailable. You can enter rainfall and temperature manually.';
       });
     }
   }
@@ -76,7 +120,8 @@ class _PHIWarningScreenState extends State<PHIWarningScreen> {
 
     if (cases == null || cases <= 0) {
       setState(() {
-        errorMessage = 'Please enter a valid weekly dengue case count.';
+        errorMessage =
+            'Please enter a valid dengue case value for the forecast assessment.';
       });
       return;
     }
@@ -117,14 +162,14 @@ class _PHIWarningScreenState extends State<PHIWarningScreen> {
     if (error.contains('socketexception') ||
         error.contains('failed host lookup') ||
         error.contains('cannot connect')) {
-      return 'Cannot connect to the backend. Please check your internet connection and try again.';
+      return 'Cannot connect to the hosted API. Please check your internet connection and try again.';
     }
 
     if (error.contains('timeout')) {
-      return 'The backend is taking too long to respond. Please try again shortly.';
+      return 'The hosted API is taking too long to respond. Please try again shortly.';
     }
 
-    return 'Unable to send the PHI alert right now. Please try again.';
+    return 'Unable to create the PHI review alert right now. Please try again.';
   }
 
   Future<void> showAlertConfirmation() async {
@@ -137,7 +182,8 @@ class _PHIWarningScreenState extends State<PHIWarningScreen> {
 
     if (cases == null || cases <= 0) {
       setState(() {
-        errorMessage = 'Please enter a valid weekly dengue case count.';
+        errorMessage =
+            'Please enter a valid dengue case value for the forecast assessment.';
       });
       return;
     }
@@ -146,19 +192,38 @@ class _PHIWarningScreenState extends State<PHIWarningScreen> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Send PHI alert?'),
+          title: const Text('Create PHI review alert?'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Please confirm the details before sending.'),
+              const Text(
+                'Please confirm the forecast assessment details before creating an advisory.',
+              ),
               const SizedBox(height: 14),
               _dialogDetail('MOH Area', selectedArea!),
-              _dialogDetail('Weekly Cases', '$cases'),
+              _dialogDetail('Assessment Cases', '$cases'),
               _dialogDetail('Rainfall', '${rainfall.toStringAsFixed(1)} mm'),
               _dialogDetail(
                 'Temperature',
                 '${temperature.toStringAsFixed(1)} °C',
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'Forecast-based advisory: PHI review is required before operational action.',
+                  style: TextStyle(
+                    color: title,
+                    fontSize: 12,
+                    height: 1.35,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
               const SizedBox(height: 10),
               Text(
@@ -174,8 +239,8 @@ class _PHIWarningScreenState extends State<PHIWarningScreen> {
             ),
             ElevatedButton.icon(
               onPressed: () => Navigator.pop(dialogContext, true),
-              icon: const Icon(Icons.send_rounded),
-              label: const Text('Send alert'),
+              icon: const Icon(Icons.fact_check_rounded),
+              label: const Text('Create alert'),
             ),
           ],
         );
@@ -210,7 +275,7 @@ class _PHIWarningScreenState extends State<PHIWarningScreen> {
         elevation: 0,
         centerTitle: true,
         title: const Text(
-          'PHI Alerts',
+          'Forecast-based PHI Alert',
           style: TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
@@ -222,6 +287,8 @@ class _PHIWarningScreenState extends State<PHIWarningScreen> {
             _alertHeader(),
             const SizedBox(height: 18),
             _inputCard(),
+            const SizedBox(height: 16),
+            _forecastDisclaimer(),
             const SizedBox(height: 16),
             SizedBox(
               height: 55,
@@ -236,9 +303,11 @@ class _PHIWarningScreenState extends State<PHIWarningScreen> {
                           color: Colors.white,
                         ),
                       )
-                    : const Icon(Icons.notification_important_rounded),
+                    : const Icon(Icons.fact_check_rounded),
                 label: Text(
-                  isLoading ? 'SENDING...' : 'SEND PHI ALERT',
+                  isLoading
+                      ? 'CREATING ALERT...'
+                      : 'CREATE PHI REVIEW ALERT',
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
                 style: ElevatedButton.styleFrom(
@@ -272,16 +341,16 @@ class _PHIWarningScreenState extends State<PHIWarningScreen> {
                         ? Icons.person_off_outlined
                         : Icons.warning_amber_rounded,
                 titleText: emailSent
-                    ? 'Alert Sent Successfully'
+                    ? 'Forecast Alert Sent for PHI Review'
                     : noPhiOfficer
                         ? 'No Active PHI Officer Found'
-                        : 'Alert Not Sent',
+                        : 'Forecast Alert Saved; Delivery Pending',
                 message: emailSent
                     ? emailMessage
                     : noPhiOfficer
                         ? 'This MOH area does not have an active PHI officer email in the database.'
                         : emailMessage.isEmpty
-                            ? 'No email response was received. Please try again.'
+                            ? 'The alert record was processed, but no email delivery response was received.'
                             : emailMessage,
               ),
             ],
@@ -296,32 +365,32 @@ class _PHIWarningScreenState extends State<PHIWarningScreen> {
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFFFFA726), Color(0xFFE53935)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+  colors: [Color(0xFF12355B), Color(0xFF2563EB)],
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+),
         borderRadius: BorderRadius.circular(26),
       ),
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
-            Icons.notifications_active_rounded,
+            Icons.fact_check_rounded,
             color: Colors.white,
             size: 42,
           ),
           SizedBox(height: 12),
           Text(
-            'PHI Alerts',
+            'Forecast-based PHI Alert',
             style: TextStyle(
               color: Colors.white,
-              fontSize: 27,
+              fontSize: 26,
               fontWeight: FontWeight.w900,
             ),
           ),
           SizedBox(height: 8),
           Text(
-            'Send a high-risk dengue alert to the active PHI officer.',
+            'Create an early-warning advisory for PHI review before operational action.',
             style: TextStyle(color: Colors.white, height: 1.4),
           ),
         ],
@@ -341,7 +410,7 @@ class _PHIWarningScreenState extends State<PHIWarningScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Alert Details',
+            'Forecast Alert Details',
             style: TextStyle(
               color: title,
               fontWeight: FontWeight.w800,
@@ -393,16 +462,22 @@ class _PHIWarningScreenState extends State<PHIWarningScreen> {
                   )
                   .toList(),
               onChanged: (value) {
+                if (value == null) return;
+
                 setState(() {
                   selectedArea = value;
                   result = null;
                   errorMessage = null;
                 });
+
+                loadAreaWeather(value);
               },
             ),
+          const SizedBox(height: 14),
+          _weatherContextCard(),
           const SizedBox(height: 18),
           const Text(
-            'Weekly Reported Dengue Cases',
+            'Dengue Cases for Forecast Assessment',
             style: TextStyle(fontWeight: FontWeight.bold, color: title),
           ),
           const SizedBox(height: 8),
@@ -412,7 +487,7 @@ class _PHIWarningScreenState extends State<PHIWarningScreen> {
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             decoration: _fieldDecoration(
               icon: Icons.bug_report_rounded,
-              hint: 'Example: 25',
+              hint: 'Example: 500',
             ),
           ),
           const SizedBox(height: 18),
@@ -423,8 +498,8 @@ class _PHIWarningScreenState extends State<PHIWarningScreen> {
           Slider(
             value: rainfall,
             min: 0,
-            max: 50,
-            divisions: 50,
+            max: 150,
+            divisions: 150,
             activeColor: red,
             onChanged: (value) => setState(() => rainfall = value),
           ),
@@ -439,6 +514,108 @@ class _PHIWarningScreenState extends State<PHIWarningScreen> {
             divisions: 40,
             activeColor: red,
             onChanged: (value) => setState(() => temperature = value),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'You can adjust the available dataset context values before creating the advisory.',
+            style: TextStyle(color: sub, fontSize: 11),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _forecastDisclaimer() {
+  return Container(
+    padding: const EdgeInsets.all(15),
+    decoration: BoxDecoration(
+      color: const Color(0xFFEFF6FF),
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(
+        color: const Color(0xFFBFDBFE),
+      ),
+    ),
+    child: const Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          Icons.info_outline_rounded,
+          color: Color(0xFF2563EB),
+          size: 25,
+        ),
+        SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            'Forecast-based decision support: this advisory uses assessment inputs and latest available project dataset context. It does not confirm a current outbreak. PHI review is required before operational action.',
+            style: TextStyle(
+              color: title,
+              height: 1.35,
+              fontSize: 12,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+  Widget _weatherContextCard() {
+    if (isWeatherLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: 10),
+            Text('Loading available dataset weather context...'),
+          ],
+        ),
+      );
+    }
+
+    if (weatherError != null) {
+      return _statusCard(
+        color: Colors.orange,
+        icon: Icons.cloud_off_rounded,
+        titleText: 'Dataset Weather Context Unavailable',
+        message: weatherError!,
+      );
+    }
+
+    if (weatherResult == null) {
+      return _statusCard(
+        color: Colors.blue,
+        icon: Icons.cloud_outlined,
+        titleText: 'Latest Available Dataset Weather Context',
+        message:
+            'Select an MOH area to auto-fill available rainfall and temperature context.',
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.blue.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.blue.withValues(alpha: 0.25)),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.cloud_sync_rounded, color: Colors.blue),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Latest available project dataset weather context loaded. Rainfall and temperature were auto-filled below.',
+              style: TextStyle(
+                color: title,
+                fontWeight: FontWeight.w600,
+                height: 1.35,
+              ),
+            ),
           ),
         ],
       ),
@@ -477,6 +654,7 @@ class _PHIWarningScreenState extends State<PHIWarningScreen> {
         color: color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: color.withValues(alpha: 0.30)),
+
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

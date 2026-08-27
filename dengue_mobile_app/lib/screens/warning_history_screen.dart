@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../services/api_service.dart';
 
 class WarningHistoryScreen extends StatefulWidget {
@@ -9,14 +10,22 @@ class WarningHistoryScreen extends StatefulWidget {
 }
 
 class _WarningHistoryScreenState extends State<WarningHistoryScreen> {
+  static const Color bg = Color(0xFFF5F7FA);
+  static const Color card = Colors.white;
+  static const Color title = Color(0xFF172033);
+  static const Color sub = Color(0xFF667085);
+  static const Color border = Color(0xFFE4E7EC);
+
+  static const Color navy = Color(0xFF12355B);
+  static const Color blue = Color(0xFF2563EB);
+  static const Color teal = Color(0xFF007C83);
+  static const Color danger = Color(0xFFDC2626);
+  static const Color warning = Color(0xFFD97706);
+  static const Color success = Color(0xFF15803D);
+
   List<Map<String, dynamic>> warnings = [];
   bool isLoading = true;
   String? errorMessage;
-
-  static const Color bg = Color(0xFFF8FAFC);
-  static const Color card = Colors.white;
-  static const Color title = Color(0xFF111827);
-  static const Color sub = Color(0xFF6B7280);
 
   @override
   void initState() {
@@ -50,15 +59,22 @@ class _WarningHistoryScreenState extends State<WarningHistoryScreen> {
   }
 
   Color riskColor(String risk) {
-    if (risk == 'HIGH') return Colors.red;
-    if (risk == 'MEDIUM') return Colors.orange;
-    return Colors.green;
+    switch (risk.toUpperCase()) {
+      case 'HIGH':
+        return danger;
+      case 'MEDIUM':
+        return warning;
+      case 'LOW':
+        return success;
+      default:
+        return blue;
+    }
   }
 
   String formatDate(String value) {
-    final date = DateTime.tryParse(value);
+    final date = DateTime.tryParse(value)?.toLocal();
 
-    if (date == null) return value;
+    if (date == null) return value.isEmpty ? 'Not available' : value;
 
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-'
         '${date.day.toString().padLeft(2, '0')}  '
@@ -66,16 +82,22 @@ class _WarningHistoryScreenState extends State<WarningHistoryScreen> {
         '${date.minute.toString().padLeft(2, '0')}';
   }
 
+  bool isEmailSent(Map<String, dynamic> item) {
+    final value = item['email_sent'];
+    return value == true || '$value'.toLowerCase() == 'true';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bg,
       appBar: AppBar(
-        title: const Text('Warning History'),
+        title: const Text('Alert History'),
         actions: [
           IconButton(
             onPressed: isLoading ? null : loadWarningHistory,
             icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'Refresh',
           ),
         ],
       ),
@@ -98,9 +120,10 @@ class _WarningHistoryScreenState extends State<WarningHistoryScreen> {
         padding: const EdgeInsets.all(18),
         children: [
           messageCard(
-            icon: Icons.error_outline_rounded,
-            color: Colors.red,
-            message: errorMessage!,
+            icon: Icons.cloud_off_outlined,
+            color: blue,
+            message:
+                'Could not load advisory history. Check the backend connection and try again.',
           ),
           const SizedBox(height: 12),
           ElevatedButton.icon(
@@ -114,12 +137,13 @@ class _WarningHistoryScreenState extends State<WarningHistoryScreen> {
 
     if (warnings.isEmpty) {
       return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(18),
         children: [
           messageCard(
             icon: Icons.history_toggle_off_rounded,
-            color: Colors.blueGrey,
-            message: 'No warning records have been saved yet.',
+            color: blue,
+            message: 'No advisory records have been saved yet.',
           ),
         ],
       );
@@ -134,8 +158,11 @@ class _WarningHistoryScreenState extends State<WarningHistoryScreen> {
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Text(
-              '${warnings.length} recent PHI warning records',
-              style: const TextStyle(color: sub),
+              '${warnings.length} recent PHI advisory records',
+              style: const TextStyle(
+                color: sub,
+                fontSize: 13,
+              ),
             ),
           );
         }
@@ -147,7 +174,8 @@ class _WarningHistoryScreenState extends State<WarningHistoryScreen> {
 
   Widget warningCard(Map<String, dynamic> item) {
     final risk = (item['risk_level'] ?? 'UNKNOWN').toString();
-    final emailSent = item['email_sent'] == true;
+    final emailSent = isEmailSent(item);
+    final statusColor = emailSent ? success : warning;
 
     return Card(
       color: card,
@@ -165,7 +193,7 @@ class _WarningHistoryScreenState extends State<WarningHistoryScreen> {
                     style: const TextStyle(
                       color: title,
                       fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
@@ -175,45 +203,47 @@ class _WarningHistoryScreenState extends State<WarningHistoryScreen> {
             const SizedBox(height: 8),
             Text(
               formatDate(item['created_at']?.toString() ?? ''),
-              style: const TextStyle(color: sub, fontSize: 12),
+              style: const TextStyle(
+                color: sub,
+                fontSize: 12,
+              ),
             ),
             const Divider(height: 24),
             detailRow(
-              Icons.bug_report_rounded,
+              Icons.bug_report_outlined,
               'Cases',
               '${item['dengue_cases'] ?? '-'}',
             ),
             detailRow(
-              Icons.water_drop_rounded,
+              Icons.water_drop_outlined,
               'Rainfall',
               '${item['rainfall_mm'] ?? '-'} mm',
             ),
             detailRow(
-              Icons.thermostat_rounded,
+              Icons.thermostat_outlined,
               'Temperature',
               '${item['temperature_c'] ?? '-'} °C',
             ),
             detailRow(
-              Icons.recommend_rounded,
+              Icons.task_alt_outlined,
               'Action',
               item['recommended_action']?.toString() ?? '-',
             ),
             const SizedBox(height: 10),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(11),
               decoration: BoxDecoration(
-                color: (emailSent ? Colors.green : Colors.orange)
-                    .withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(12),
+                color: statusColor.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(13),
               ),
               child: Row(
                 children: [
                   Icon(
                     emailSent
-                        ? Icons.mark_email_read_rounded
-                        : Icons.error_outline_rounded,
-                    color: emailSent ? Colors.green : Colors.orange,
+                        ? Icons.mark_email_read_outlined
+                        : Icons.schedule_send_outlined,
+                    color: statusColor,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -221,12 +251,11 @@ class _WarningHistoryScreenState extends State<WarningHistoryScreen> {
                       emailSent
                           ? 'Email sent to ${item['recipient_email'] ?? 'PHI officer'}'
                           : (item['email_message']?.toString() ??
-                              'Email was not sent'),
+                              'Advisory saved; email delivery is pending.'),
                       style: TextStyle(
-                        color: emailSent
-                            ? Colors.green.shade800
-                            : Colors.orange.shade900,
+                        color: emailSent ? success : warning,
                         fontWeight: FontWeight.w600,
+                        height: 1.3,
                       ),
                     ),
                   ),
@@ -245,9 +274,12 @@ class _WarningHistoryScreenState extends State<WarningHistoryScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: Colors.redAccent),
+          Icon(icon, size: 18, color: blue),
           const SizedBox(width: 8),
-          Text('$label: ', style: const TextStyle(color: sub)),
+          Text(
+            '$label: ',
+            style: const TextStyle(color: sub),
+          ),
           Expanded(
             child: Text(
               value,
@@ -267,11 +299,11 @@ class _WarningHistoryScreenState extends State<WarningHistoryScreen> {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        text,
+        text.toUpperCase(),
         style: TextStyle(
           color: color,
-          fontWeight: FontWeight.bold,
-          fontSize: 12,
+          fontWeight: FontWeight.w800,
+          fontSize: 11,
         ),
       ),
     );
@@ -296,7 +328,10 @@ class _WarningHistoryScreenState extends State<WarningHistoryScreen> {
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(color: title),
+              style: const TextStyle(
+                color: title,
+                height: 1.35,
+              ),
             ),
           ),
         ],

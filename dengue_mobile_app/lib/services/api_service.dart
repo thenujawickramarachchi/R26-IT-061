@@ -2,22 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  // Hosted model API used only for the area proxy-risk preview.
-  // Keep recommendation, PHI warning, and database calls on baseUrl until
-  // their hosted versions are fully tested.
-  static const String areaRiskBaseUrl =
+  static const String baseUrl =
       'https://sahan-kaveesha-r26-it-061-dengue-api.hf.space';
-
-  // Real Android phone same WiFi backend URL
-  // Backend running on laptop:
-  // http://10.170.250.85:5000
-  static const String baseUrl = 'http://10.0.2.2:5000';
-
-  // Chrome / Windows run use this:
-  // static const String baseUrl = 'http://127.0.0.1:5000';
-
-  // Android Emulator use this:
-  // static const String baseUrl = 'http://10.0.2.2:5000';
 
   static Future<Map<String, dynamic>> getRecommendation({
     required String area,
@@ -26,10 +12,8 @@ class ApiService {
     required double temperature,
   }) async {
     try {
-      final url = Uri.parse('$baseUrl/recommend');
-
       final response = await http.post(
-        url,
+        Uri.parse('$baseUrl/recommend'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'area': area,
@@ -41,15 +25,14 @@ class ApiService {
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
-      } else {
-        throw Exception(
-          'Failed to get recommendation. Status: ${response.statusCode}. Body: ${response.body}',
-        );
       }
-    } catch (e) {
+
       throw Exception(
-        'Cannot connect to backend. Please check WiFi, backend server, and API URL. Error: $e',
+        'Failed to get recommendation. Status: ${response.statusCode}. '
+        'Body: ${response.body}',
       );
+    } catch (e) {
+      throw Exception('Cannot connect to recommendation service. Error: $e');
     }
   }
 
@@ -60,10 +43,8 @@ class ApiService {
     required double temperature,
   }) async {
     try {
-      final url = Uri.parse('$baseUrl/send-warning');
-
       final response = await http.post(
-        url,
+        Uri.parse('$baseUrl/send-warning'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'area': area,
@@ -75,15 +56,87 @@ class ApiService {
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
-      } else {
-        throw Exception(
-          'Failed to send warning. Status: ${response.statusCode}. Body: ${response.body}',
+      }
+
+      throw Exception(
+        'Failed to send warning. Status: ${response.statusCode}. '
+        'Body: ${response.body}',
+      );
+    } catch (e) {
+      throw Exception('Cannot send PHI warning. Error: $e');
+    }
+  }
+
+  static Future<List<String>> getMohAreas() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/moh-areas'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return List<String>.from(data['areas'] ?? []);
+      }
+
+      throw Exception(
+        'Failed to load MOH areas. Status: ${response.statusCode}.',
+      );
+    } catch (e) {
+      throw Exception('Cannot load MOH areas. Error: $e');
+    }
+  }
+
+  static Future<Map<String, dynamic>> getAreaWeather({
+    required String area,
+  }) async {
+    try {
+      final url = Uri.parse('$baseUrl/area-weather').replace(
+        queryParameters: {'area': area},
+      );
+
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        return Map<String, dynamic>.from(
+          jsonDecode(response.body) as Map,
         );
       }
-    } catch (e) {
+
       throw Exception(
-        'Cannot connect to backend. Please check WiFi, backend server, and API URL. Error: $e',
+        'Failed to load area weather. Status: ${response.statusCode}. '
+        'Body: ${response.body}',
       );
+    } catch (e) {
+      throw Exception('Cannot load area weather. Error: $e');
+    }
+  }
+
+  static Future<Map<String, dynamic>> getAreaProxyRisk({
+    required String area,
+    required int year,
+    required int week,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/predict-area-risk'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'area': area,
+          'year': year,
+          'week': week,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+
+      throw Exception(
+        'Area risk preview unavailable. Status: ${response.statusCode}. '
+        'Body: ${response.body}',
+      );
+    } catch (e) {
+      throw Exception('Cannot load area risk preview. Error: $e');
     }
   }
 
@@ -91,12 +144,15 @@ class ApiService {
     int limit = 20,
   }) async {
     try {
-      final url = Uri.parse('$baseUrl/warning-history?limit=$limit');
-      final response = await http.get(url);
+      final response = await http.get(
+        Uri.parse('$baseUrl/warning-history?limit=$limit'),
+      );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final warnings = data['warnings'] as List? ?? [];
+
+        final warnings =
+            (data['warning_history'] ?? data['warnings'] ?? []) as List;
 
         return warnings
             .map((item) => Map<String, dynamic>.from(item as Map))
@@ -112,54 +168,7 @@ class ApiService {
     }
   }
 
-  static Future<List<String>> getMohAreas() async {
-    try {
-      final url = Uri.parse('$baseUrl/moh-areas');
-      final response = await http.get(url);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return List<String>.from(data['areas'] ?? []);
-      }
-
-      throw Exception(
-        'Failed to load MOH areas. Status: ${response.statusCode}',
-      );
-    } catch (e) {
-      throw Exception('Cannot load MOH areas from backend. Error: $e');
-    }
-  }
-
-  static Future<Map<String, dynamic>> getAreaProxyRisk({
-    required String area,
-    required int year,
-    required int week,
-  }) async {
-    try {
-      final url = Uri.parse('$areaRiskBaseUrl/predict-area-risk');
-
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'area': area,
-          'year': year,
-          'week': week,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
-      }
-
-      throw Exception(
-        'Area risk preview unavailable. Status: ${response.statusCode}.',
-      );
-    } catch (e) {
-      throw Exception('Cannot load area risk preview. Error: $e');
-    }
-  }
-    static Future<Map<String, dynamic>> submitFeedback({
+  static Future<Map<String, dynamic>> submitFeedback({
     required int warningHistoryId,
     required int casesAfter,
     required int followUpDays,
@@ -167,10 +176,8 @@ class ApiService {
     String feedbackNotes = '',
   }) async {
     try {
-      final url = Uri.parse('$baseUrl/submit-feedback');
-
       final response = await http.post(
-        url,
+        Uri.parse('$baseUrl/submit-feedback'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'warning_history_id': warningHistoryId,
@@ -186,8 +193,7 @@ class ApiService {
       }
 
       throw Exception(
-        'Failed to submit feedback. '
-        'Status: ${response.statusCode}. '
+        'Failed to submit feedback. Status: ${response.statusCode}. '
         'Body: ${response.body}',
       );
     } catch (e) {

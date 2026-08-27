@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../services/api_service.dart';
 
 class RecommendationScreen extends StatefulWidget {
@@ -24,6 +25,10 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
   Map<String, dynamic>? areaRiskResult;
   String? areaRiskError;
 
+  bool isWeatherLoading = false;
+  Map<String, dynamic>? weatherResult;
+  String? weatherError;
+
   List<String> areas = [];
   bool isAreasLoading = true;
   String? areasError;
@@ -33,12 +38,18 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
   static const Color border = Color(0xFFE5E7EB);
   static const Color title = Color(0xFF111827);
   static const Color sub = Color(0xFF6B7280);
-  static const Color red = Color(0xFFE53935);
+  static const Color red = Color(0xFF2563EB);
 
   @override
   void initState() {
     super.initState();
     loadMohAreas();
+  }
+
+  @override
+  void dispose() {
+    casesController.dispose();
+    super.dispose();
   }
 
   Future<void> loadMohAreas() async {
@@ -51,12 +62,14 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
       final loadedAreas = await ApiService.getMohAreas();
 
       if (!mounted) return;
+
       setState(() {
         areas = loadedAreas;
         isAreasLoading = false;
       });
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
+
       setState(() {
         areasError = 'Cannot load MOH areas. Please try again.';
         isAreasLoading = false;
@@ -66,12 +79,10 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
 
   Future<void> loadAreaProxyRisk(String area) async {
     setState(() {
-      isAreaRiskLoading = false;
+      isAreaRiskLoading = true;
       areaRiskResult = null;
       areaRiskError = null;
     });
-
-    setState(() => isAreaRiskLoading = true);
 
     try {
       final response = await ApiService.getAreaProxyRisk(
@@ -81,16 +92,59 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
       );
 
       if (!mounted) return;
+
       setState(() {
         areaRiskResult = response;
         isAreaRiskLoading = false;
       });
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
+
       setState(() {
         areaRiskError =
             'Area proxy-risk preview is currently unavailable for $area.';
         isAreaRiskLoading = false;
+      });
+    }
+  }
+
+  double _toDouble(dynamic value, double fallback) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? fallback;
+  }
+
+  Future<void> loadAreaWeather(String area) async {
+    setState(() {
+      isWeatherLoading = true;
+      weatherResult = null;
+      weatherError = null;
+    });
+
+    try {
+      final response = await ApiService.getAreaWeather(area: area);
+
+      final loadedRainfall = _toDouble(response['rainfall'], rainfall);
+      final loadedTemperature = _toDouble(response['temperature'], temperature);
+
+      if (!mounted) return;
+
+      setState(() {
+        weatherResult = response;
+
+        // Keeps slider values inside their valid ranges.
+        rainfall = loadedRainfall.clamp(0.0, 150.0).toDouble();
+        temperature = loadedTemperature.clamp(20.0, 40.0).toDouble();
+
+        isWeatherLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        weatherError =
+            'Weather context is currently unavailable for $area. '
+            'You can enter values manually.';
+        isWeatherLoading = false;
       });
     }
   }
@@ -110,7 +164,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
       return;
     }
 
-    final int? parsedCases = int.tryParse(casesController.text.trim());
+    final parsedCases = int.tryParse(casesController.text.trim());
 
     if (parsedCases == null || parsedCases <= 0) {
       setState(() {
@@ -118,8 +172,6 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
       });
       return;
     }
-
-    final int cases = parsedCases;
 
     setState(() {
       isLoading = true;
@@ -130,16 +182,20 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
     try {
       final response = await ApiService.getRecommendation(
         area: selectedArea!,
-        cases: cases,
+        cases: parsedCases,
         rainfall: rainfall,
         temperature: temperature,
       );
+
+      if (!mounted) return;
 
       setState(() {
         result = response;
         isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
+
       setState(() {
         errorMessage = e.toString();
         isLoading = false;
@@ -166,11 +222,13 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
 
     if (risk == 'HIGH') {
       return 'Urgent dengue intervention is required. PHI warning is triggered for this high-risk situation.';
-    } else if (risk == 'MEDIUM') {
-      return 'Moderate dengue risk detected. Preventive actions are recommended before the situation becomes critical.';
-    } else {
-      return 'The situation is currently stable. Continue monitoring the area regularly.';
     }
+
+    if (risk == 'MEDIUM') {
+      return 'Moderate dengue risk detected. Preventive actions are recommended before the situation becomes critical.';
+    }
+
+    return 'The situation is currently stable. Continue monitoring the area regularly.';
   }
 
   String getActionExplanation(String risk, String action) {
@@ -180,16 +238,18 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
 
     if (risk == 'HIGH') {
       return 'High dengue cases with rainfall and temperature conditions indicate increased mosquito breeding risk. Therefore, urgent intervention such as $action is recommended.';
-    } else if (risk == 'MEDIUM') {
-      return 'The area shows moderate dengue risk. The recommended action helps reduce possible outbreak growth at an early stage.';
-    } else {
-      return 'The current risk level is low. The recommended action focuses on monitoring and prevention.';
     }
+
+    if (risk == 'MEDIUM') {
+      return 'The area shows moderate dengue risk. The recommended action helps reduce possible outbreak growth at an early stage.';
+    }
+
+    return 'The current risk level is low. The recommended action focuses on monitoring and prevention.';
   }
 
   @override
   Widget build(BuildContext context) {
-    final riskLevel = result?['risk_level'];
+    final riskLevel = (result?['risk_level'] ?? 'LOW').toString();
     final recommendations = result?['recommendations'] as List?;
     final email = result?['email'];
     final topAction = result?['top_action'];
@@ -218,7 +278,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                       ),
                     )
                   : const Icon(Icons.rocket_launch_rounded),
-              label: Text(isLoading ? 'Analyzing...' : 'GET RECOMMENDATION'),
+              label: Text(isLoading ? 'ANALYZING...' : 'GET RECOMMENDATION'),
             ),
             if (errorMessage != null) ...[
               const SizedBox(height: 16),
@@ -257,20 +317,19 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
               ),
               const SizedBox(height: 12),
               if (recommendations != null)
-                ...recommendations.map((item) => _recommendationTile(item)),
+                ...recommendations.map(_recommendationTile),
               const SizedBox(height: 14),
-              if (recommendations != null && recommendations.isNotEmpty) ...[
+              if (recommendations != null && recommendations.isNotEmpty)
                 _messageCard(
                   icon: Icons.lightbulb_outline_rounded,
                   color: Colors.lightBlue,
                   titleText: 'Why this action?',
                   message: getActionExplanation(
                     riskLevel,
-                    recommendations.first['action'],
+                    recommendations.first['action'].toString(),
                   ),
                 ),
-                const SizedBox(height: 14),
-              ],
+              const SizedBox(height: 14),
               if (riskLevel == 'HIGH')
                 _messageCard(
                   icon: Icons.mark_email_read_rounded,
@@ -287,7 +346,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                   icon: Icons.info_outline_rounded,
                   color: Colors.green,
                   titleText: 'PHI Email',
-                  message: 'Email not sent because risk level is not HIGH.',
+                  message: 'Email is sent only when the calculated risk is HIGH.',
                 ),
             ],
           ],
@@ -315,13 +374,13 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
         children: [
           CircleAvatar(
             radius: 28,
-            backgroundColor: Color(0xFFFEE2E2),
+            backgroundColor: Color(0xFFE8F0FF),
             child: Icon(Icons.psychology_alt_rounded, color: red, size: 32),
           ),
           SizedBox(width: 16),
           Expanded(
             child: Text(
-              'Enter current weekly dengue data. The RL agent will recommend the best intervention action.',
+              'Select an MOH area, review the available dataset context, and enter the current dengue case count for an intervention recommendation.',
               style: TextStyle(color: sub, height: 1.4),
             ),
           ),
@@ -381,22 +440,29 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                 ),
                 items: areas
                     .map(
-                      (area) =>
-                          DropdownMenuItem(value: area, child: Text(area)),
+                      (area) => DropdownMenuItem(
+                        value: area,
+                        child: Text(area),
+                      ),
                     )
                     .toList(),
                 onChanged: (value) {
                   if (value == null) return;
+
                   setState(() {
                     selectedArea = value;
                     result = null;
                     errorMessage = null;
                   });
+
                   loadAreaProxyRisk(value);
+                  loadAreaWeather(value);
                 },
               ),
             const SizedBox(height: 12),
             _areaRiskPreviewCard(),
+            const SizedBox(height: 12),
+            _weatherContextCard(),
             const SizedBox(height: 18),
             const Text(
               'Weekly Reported Dengue Cases',
@@ -418,8 +484,8 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
               value: rainfall,
               unit: 'mm',
               min: 0,
-              max: 50,
-              divisions: 50,
+              max: 150,
+              divisions: 150,
               icon: Icons.water_drop_rounded,
               onChanged: (value) => setState(() => rainfall = value),
             ),
@@ -433,6 +499,11 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
               divisions: 40,
               icon: Icons.thermostat_rounded,
               onChanged: (value) => setState(() => temperature = value),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'You can adjust the rainfall and temperature values before analysis.',
+              style: TextStyle(color: sub, fontSize: 11),
             ),
           ],
         ),
@@ -452,7 +523,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
             SizedBox(width: 10),
-            Text('Loading area risk preview...'),
+            Text('Loading historical area-risk context...'),
           ],
         ),
       );
@@ -480,8 +551,10 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
         (areaRiskResult!['predicted_area_risk_level'] ?? 'Unknown')
             .toString()
             .toUpperCase();
+
     final probabilities =
         Map<String, dynamic>.from(areaRiskResult!['probabilities'] ?? {});
+
     final high = probabilities['High'] ?? probabilities['HIGH'] ?? 0;
     final medium = probabilities['Medium'] ?? probabilities['MEDIUM'] ?? 0;
     final low = probabilities['Low'] ?? probabilities['LOW'] ?? 0;
@@ -521,8 +594,75 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Current situation risk is calculated after you tap Get Recommendation.',
+            'This is model-based historical context, not the current calculated risk.',
             style: TextStyle(color: sub, fontSize: 11),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _weatherContextCard() {
+    if (isWeatherLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: 10),
+            Text('Loading area weather context...'),
+          ],
+        ),
+      );
+    }
+
+    if (weatherError != null) {
+      return _messageCard(
+        icon: Icons.cloud_off_rounded,
+        color: Colors.orange,
+        titleText: 'Weather Context Unavailable',
+        message: weatherError!,
+      );
+    }
+
+    if (weatherResult == null) {
+      return _messageCard(
+        icon: Icons.cloud_outlined,
+        color: Colors.blue,
+        titleText: 'Latest Dataset Weather Context',
+        message: 'Select an MOH area to auto-fill available rainfall and temperature context.',
+      );
+    }
+
+    final source =
+        weatherResult!['source']?.toString() ?? 'Project dataset context';
+    final updatedAt = weatherResult!['updated_at']?.toString() ?? 'Not available';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.blue.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.blue.withValues(alpha: 0.25)),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.cloud_sync_rounded, color: Colors.blue),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Latest Dataset Weather Context loaded. Rainfall and temperature were auto-filled below.',
+              style: TextStyle(
+                color: title,
+                fontWeight: FontWeight.w600,
+                height: 1.35,
+              ),
+            ),
           ),
         ],
       ),
@@ -563,7 +703,10 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
               ),
               Text(
                 '${value.toStringAsFixed(1)} $unit',
-                style: const TextStyle(color: red, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: red,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
@@ -596,7 +739,10 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Detected Risk Level', style: TextStyle(color: sub)),
+                const Text(
+                  'Detected Risk Level',
+                  style: TextStyle(color: sub),
+                ),
                 Text(
                   risk,
                   style: TextStyle(
@@ -617,17 +763,26 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
     return Card(
       color: card,
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 8,
+        ),
         leading: CircleAvatar(
           backgroundColor: red.withValues(alpha: 0.12),
           child: Text(
             '${item['rank']}',
-            style: const TextStyle(color: red, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              color: red,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         title: Text(
-          item['action'],
-          style: const TextStyle(fontWeight: FontWeight.bold, color: title),
+          item['action'].toString(),
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: title,
+          ),
         ),
         subtitle: const Text(
           'RL agent recommended action',
