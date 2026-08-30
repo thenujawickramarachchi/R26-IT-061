@@ -1,8 +1,0 @@
-.git
-.gitignore
-.venv
-__pycache__
-.pytest_cache
-tests
-Dengue_NLP_Model
-*.zip
