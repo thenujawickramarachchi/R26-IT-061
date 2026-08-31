@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../services/backend_config.dart';
 import 'dengue_prediction_screen.dart';
 import 'trend_screen.dart';
-import 'risk_map_screen.dart';
 import 'rl_dashboard_screen.dart';
 import 'recommendation_screen.dart';
 import 'phi_warning_screen.dart';
@@ -13,6 +12,7 @@ import 'explain_screen.dart';
 import 'inspection_screen.dart';
 import 'nlp_screen.dart';
 import 'settings_screen.dart';
+import 'manual_prediction_screen.dart';
 import 'historical_prediction_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -121,11 +121,11 @@ class HomeScreen extends StatelessWidget {
                   ),
 
                   _QuickCard(
-                    icon: Icons.map,
+                    icon: Icons.edit_note,
 
-                    title: "MOH Risk Map",
+                    title: "Manual Prediction",
 
-                    page: const RiskMapScreen(),
+                    page: const ManualPredictionScreen(),
 
                     context: context,
                   ),
