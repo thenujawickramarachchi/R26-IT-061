@@ -13,7 +13,6 @@ import 'explain_screen.dart';
 import 'inspection_screen.dart';
 import 'nlp_screen.dart';
 import 'settings_screen.dart';
-import 'manual_prediction_screen.dart';
 import 'historical_prediction_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -122,15 +121,6 @@ class HomeScreen extends StatelessWidget {
                   ),
 
                   _QuickCard(
-                    icon: Icons.edit_note,
-                    title: "Manual Prediction",
-                    page: const ManualPredictionScreen(),
-                    context: context,
-                  ),
-
-                  
-
-                  _QuickCard(
                     icon: Icons.map,
 
                     title: "MOH Risk Map",
@@ -218,6 +208,26 @@ class HomeScreen extends StatelessWidget {
 }
 
 class _RiskCard extends StatelessWidget {
+  String getCurrentDate() {
+    final now = DateTime.now();
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+
+    return '${months[now.month - 1]} ${now.day}, ${now.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -257,10 +267,9 @@ class _RiskCard extends StatelessWidget {
 
           const SizedBox(height: 8),
 
-          const Text(
-            "Colombo District\nWeek 35, 2026",
-
-            style: TextStyle(color: Colors.white, fontSize: 16),
+          Text(
+            'Colombo District\n${getCurrentDate()}',
+            style: const TextStyle(color: Colors.white, fontSize: 16),
           ),
         ],
       ),
