@@ -13,6 +13,8 @@ import 'explain_screen.dart';
 import 'inspection_screen.dart';
 import 'nlp_screen.dart';
 import 'settings_screen.dart';
+import 'manual_prediction_screen.dart';
+import 'historical_prediction_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -105,12 +107,28 @@ class HomeScreen extends StatelessWidget {
                   _QuickCard(
                     icon: Icons.analytics,
 
-                    title: "Prediction",
+                    title: "Future Prediction",
 
                     page: const DenguePredictionScreen(),
 
                     context: context,
                   ),
+
+                  _QuickCard(
+                    icon: Icons.analytics_outlined,
+                    title: "Historical Prediction",
+                    page: HistoricalPredictionScreen(),
+                    context: context,
+                  ),
+
+                  _QuickCard(
+                    icon: Icons.edit_note,
+                    title: "Manual Prediction",
+                    page: const ManualPredictionScreen(),
+                    context: context,
+                  ),
+
+                  
 
                   _QuickCard(
                     icon: Icons.map,
