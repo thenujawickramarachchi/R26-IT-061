@@ -21,16 +21,16 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
 
   // Canonical MOH-area names used by the deployed backend.
   final Map<String, LatLng> areaCoordinates = {
-    "CMC": const LatLng(6.9271, 79.8612),
+    "Avissawella": const LatLng(6.9540, 80.2100),
+    "Colombo": const LatLng(6.9271, 79.8612),
     "Dehiwala": const LatLng(6.8517, 79.8657),
-    "Hanwella": const LatLng(6.9090, 80.0830),
     "Homagama": const LatLng(6.8440, 80.0030),
     "Kaduwela": const LatLng(6.9300, 79.9820),
     "Kesbewa": const LatLng(6.7800, 79.9300),
     "Kolonnawa": const LatLng(6.9330, 79.8950),
+    "Kotte": const LatLng(6.8905, 79.9014),
     "Maharagama": const LatLng(6.8480, 79.9260),
     "Moratuwa": const LatLng(6.7730, 79.8820),
-    "Padukka": const LatLng(6.8410, 80.0910),
   };
 
   @override

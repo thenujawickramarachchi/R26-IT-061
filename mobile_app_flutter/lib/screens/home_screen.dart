@@ -1,368 +1,794 @@
 import 'package:flutter/material.dart';
 
 import 'dengue_prediction_screen.dart';
-import 'dashboard_screen.dart';
 import 'trend_screen.dart';
 import 'risk_map_screen.dart';
-
 import 'rl_dashboard_screen.dart';
 import 'recommendation_screen.dart';
 import 'phi_warning_screen.dart';
 import 'warning_history_screen.dart';
 import 'intervention_feedback_screen.dart';
-
 import 'explain_screen.dart';
-import 'notification_screen.dart';
+
 
 class HomeScreen extends StatelessWidget {
+
   const HomeScreen({super.key});
+static const Color primary = Color(0xFF00796B);
+
 
   @override
   Widget build(BuildContext context) {
+
+
     return Scaffold(
+
       appBar: AppBar(
+
         title: const Text(
-          'Dengue Health SL',
+          "Dengue Health SL",
           style: TextStyle(
             fontWeight: FontWeight.bold,
           ),
         ),
+
+
+        actions: [
+
+          IconButton(
+
+            icon: const Icon(
+              Icons.notifications_none,
+            ),
+
+            onPressed: (){
+
+            },
+
+          )
+
+        ],
+
       ),
+
+
+
       body: SafeArea(
+
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+
+
+          padding:
+          const EdgeInsets.all(16),
+
+
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+
+            crossAxisAlignment:
+            CrossAxisAlignment.start,
+
+
             children: [
+
+
+
               const Text(
-                'AI-Based Dengue Public Health Support System',
+
+                "AI-Based Dengue Public Health\nSupport System",
+
                 style: TextStyle(
+
                   fontSize: 22,
-                  fontWeight: FontWeight.bold,
+
+                  fontWeight:
+                  FontWeight.bold,
+
                 ),
+
               ),
 
-              const SizedBox(height: 8),
+
+
+              const SizedBox(height:8),
+
+
 
               Text(
-                'Select a module to continue.',
+
+                "Monitor dengue risk, predictions and public health actions.",
+
                 style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade700,
+
+                  color:
+                  Colors.grey.shade600,
+
+                  fontSize:14,
+
                 ),
+
               ),
 
-              const SizedBox(height: 28),
 
-              // ============================================================
-              // DENGUE PREDICTION
-              // ============================================================
-              _FeatureCard(
-                icon: Icons.analytics_rounded,
-                title: 'Dengue Prediction',
-                description:
-                    'Predict Colombo District dengue outbreak risk and view selected MOH-area proxy risk context.',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const DenguePredictionScreen(),
-                    ),
-                  );
-                },
+
+              const SizedBox(height:20),
+
+
+
+
+              _RiskCard(),
+
+
+
+
+              const SizedBox(height:24),
+
+
+
+
+              const Text(
+
+                "Quick Access",
+
+                style: TextStyle(
+
+                  fontSize:18,
+
+                  fontWeight:
+                  FontWeight.bold,
+
+                ),
+
               ),
 
-              const SizedBox(height: 16),
 
-              // ============================================================
-              // DENGUE DASHBOARD
-              // ============================================================
-              _FeatureCard(
-                icon: Icons.dashboard_rounded,
-                title: 'Dengue Dashboard',
-                description:
-                    'View the current Colombo District dengue risk, prediction summary, and latest model information.',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const DashboardScreen(),
-                    ),
-                  );
-                },
+
+              const SizedBox(height:12),
+
+
+
+
+
+              GridView.count(
+
+                crossAxisCount:3,
+                childAspectRatio: 0.85,
+
+                shrinkWrap:true,
+
+                physics:
+                const NeverScrollableScrollPhysics(),
+
+
+                crossAxisSpacing:12,
+
+                mainAxisSpacing:12,
+
+
+                children: [
+
+
+                  _QuickCard(
+
+                    icon:Icons.analytics,
+
+                    title:"Prediction",
+
+                    page:
+                    const DenguePredictionScreen(),
+
+                    context:context,
+
+                  ),
+
+
+
+                  _QuickCard(
+
+                    icon:Icons.map,
+
+                    title:"MOH Risk Map",
+
+                    page:
+                    const RiskMapScreen(),
+
+                    context:context,
+
+                  ),
+
+
+
+                  _QuickCard(
+
+                    icon:Icons.warning,
+
+                    title:"PHI Warning",
+
+                    page:
+                    const PHIWarningScreen(),
+
+                    context:context,
+
+                  ),
+
+
+
+                  _QuickCard(
+
+                    icon:Icons.auto_awesome,
+
+                    title:"RL Recommendation",
+
+                    page:
+                    const RecommendationScreen(),
+
+                    context:context,
+
+                  ),
+
+
+
+                  _QuickCard(
+
+                    icon:Icons.show_chart,
+
+                    title:"Trends",
+
+                    page:
+                    const TrendScreen(),
+
+                    context:context,
+
+                  ),
+
+
+
+                  _QuickCard(
+
+                    icon:Icons.dashboard,
+
+                    title:"Dashboard",
+
+                    page:
+                    const RLDashboardScreen(),
+
+                    context:context,
+
+                  ),
+
+
+                ],
+
               ),
 
-              const SizedBox(height: 16),
 
-              // ============================================================
-              // DENGUE TRENDS
-              // ============================================================
-              _FeatureCard(
-                icon: Icons.show_chart_rounded,
-                title: 'Dengue Trends',
-                description:
-                    'Explore recent weekly dengue risk and prediction trends for the Colombo District.',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const TrendScreen(),
-                    ),
-                  );
-                },
-              ),
 
-              const SizedBox(height: 16),
 
-              // ============================================================
-              // MOH RISK MAP
-              // ============================================================
-              _FeatureCard(
-                icon: Icons.map_rounded,
-                title: 'MOH Risk Map',
-                description:
-                    'View Colombo District MOH-area proxy dengue risk on an interactive map.',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const RiskMapScreen(),
-                    ),
-                  );
-                },
-              ),
+              const SizedBox(height:24),
 
-              const SizedBox(height: 16),
 
-              // ============================================================
-              // RL OPERATIONS DASHBOARD
-              // ============================================================
-              _FeatureCard(
-                icon: Icons.monitor_heart_rounded,
-                title: 'RL Operations Dashboard',
-                description:
-                    'Monitor PHI advisory activity, high-risk records, warning email delivery, and MOH-area coverage.',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const RLDashboardScreen(),
-                    ),
-                  );
-                },
-              ),
 
-              const SizedBox(height: 16),
 
-              // ============================================================
-              // RL RECOMMENDATION
-              // ============================================================
-              _FeatureCard(
-                icon: Icons.auto_awesome_rounded,
-                title: 'RL Recommendation',
-                description:
-                    'Assess the current MOH-area dengue situation and receive ranked public-health intervention recommendations from the RL agent.',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const RecommendationScreen(),
-                    ),
-                  );
-                },
-              ),
+              _SafetyCard(),
 
-              const SizedBox(height: 16),
 
-              // ============================================================
-              // PHI WARNING
-              // ============================================================
-              _FeatureCard(
-                icon: Icons.warning_amber_rounded,
-                title: 'PHI Warning',
-                description:
-                    'Assess an MOH-area situation and generate a PHI warning for high-risk dengue conditions.',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const PHIWarningScreen(),
-                    ),
-                  );
-                },
-              ),
 
-              const SizedBox(height: 16),
 
-              // ============================================================
-              // WARNING HISTORY
-              // ============================================================
-              _FeatureCard(
-                icon: Icons.history_rounded,
-                title: 'Warning History',
-                description:
-                    'Review previously generated dengue warnings, risk details, and warning delivery information.',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const WarningHistoryScreen(),
-                    ),
-                  );
-                },
-              ),
+              const SizedBox(height:20),
 
-              const SizedBox(height: 16),
 
-              // ============================================================
-              // INTERVENTION FEEDBACK
-              // ============================================================
-              _FeatureCard(
-                icon: Icons.rate_review_rounded,
-                title: 'Intervention Feedback',
-                description:
-                    'Record follow-up dengue case outcomes and feedback for previously issued intervention warnings.',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const InterventionFeedbackScreen(),
-                    ),
-                  );
-                },
-              ),
 
-              const SizedBox(height: 16),
 
-              // ============================================================
-              // EXPLAINABLE AI
-              // ============================================================
-              _FeatureCard(
-                icon: Icons.psychology_alt_rounded,
-                title: 'Explainable AI',
-                description:
-                    'Understand dengue risk predictions using Local and Global SHAP explanations.',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const ExplainScreen(),
-                    ),
-                  );
-                },
-              ),
+              _MoreSection(context),
 
-              const SizedBox(height: 16),
 
-              // ============================================================
-              // NOTIFICATIONS
-              // ============================================================
-              _FeatureCard(
-                icon: Icons.notifications_active_rounded,
-                title: 'Notifications',
-                description:
-                    'View dengue risk alerts and important warning history from the public-health support system.',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const NotificationScreen(),
-                    ),
-                  );
-                },
-              ),
-
-              const SizedBox(height: 20),
             ],
+
           ),
+
         ),
+
       ),
+
     );
+
+
   }
+
 }
 
-class _FeatureCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String description;
-  final VoidCallback onTap;
 
-  const _FeatureCard({
-    required this.icon,
-    required this.title,
-    required this.description,
-    required this.onTap,
-  });
+
+
+
+
+class _RiskCard extends StatelessWidget {
+
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
+
+
+    return Container(
+
+      width:double.infinity,
+
+      padding:
+      const EdgeInsets.all(20),
+
+
+      decoration:BoxDecoration(
+
+        color:
+        const Color(0xFF00695C),
+
+        borderRadius:
+        BorderRadius.circular(22),
+
       ),
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF00796B).withValues(
-                    alpha: 0.10,
-                  ),
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: Icon(
-                  icon,
-                  color: const Color(0xFF00796B),
-                  size: 28,
-                ),
-              ),
 
-              const SizedBox(width: 16),
 
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+      child:Column(
 
-                    const SizedBox(height: 7),
+        crossAxisAlignment:
+        CrossAxisAlignment.start,
 
-                    Text(
-                      description,
-                      style: TextStyle(
-                        fontSize: 13,
-                        height: 1.4,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+        children:[
 
-              const SizedBox(width: 8),
 
-              const Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 18,
-              ),
-            ],
+          const Text(
+
+            "Current District Risk",
+
+            style:TextStyle(
+
+              color:Colors.white,
+
+              fontSize:15,
+
+            ),
+
           ),
-        ),
+
+
+
+          const SizedBox(height:8),
+
+
+
+          const Text(
+
+            "MEDIUM",
+
+            style:TextStyle(
+
+              color:Colors.orange,
+
+              fontSize:32,
+
+              fontWeight:
+              FontWeight.bold,
+
+            ),
+
+          ),
+
+
+
+
+          const SizedBox(height:8),
+
+
+
+          const Text(
+
+            "Colombo District\nWeek 35, 2026",
+
+            style:TextStyle(
+
+              color:Colors.white,
+
+              fontSize:16,
+
+            ),
+
+          )
+
+
+        ],
+
       ),
+
     );
+
+
   }
+
+}
+
+
+
+
+
+
+
+class _QuickCard extends StatelessWidget {
+  static const Color primary = Color(0xFF00796B);
+
+
+  final IconData icon;
+
+  final String title;
+
+  final Widget page;
+
+  final BuildContext context;
+
+
+
+  const _QuickCard({
+
+    required this.icon,
+
+    required this.title,
+
+    required this.page,
+
+    required this.context,
+
+  });
+
+
+
+
+
+  @override
+  Widget build(BuildContext context) {
+
+
+    return InkWell(
+
+      borderRadius:
+      BorderRadius.circular(18),
+
+
+      onTap:(){
+
+
+        Navigator.push(
+
+          context,
+
+          MaterialPageRoute(
+
+            builder:(_)=>page,
+
+          ),
+
+        );
+
+
+      },
+
+
+
+      child:Container(
+
+        padding:
+        const EdgeInsets.all(8),
+
+
+        decoration:BoxDecoration(
+
+          color:
+          const Color(0xFFF1F8F7),
+
+          borderRadius:
+          BorderRadius.circular(18),
+
+
+        ),
+
+
+
+        child:Column(
+
+          mainAxisAlignment:
+          MainAxisAlignment.center,
+
+
+          children:[
+
+
+
+            Container(
+
+              padding:
+              const EdgeInsets.all(12),
+
+              decoration:BoxDecoration(
+
+                color:
+                primary.withValues(alpha:0.12),
+
+                borderRadius:
+                BorderRadius.circular(14),
+
+              ),
+
+
+              child:Icon(
+
+                icon,
+
+                color:primary,
+
+              ),
+
+            ),
+
+
+
+
+            const SizedBox(height:8),
+
+
+
+            Text(
+  title,
+  maxLines: 2,
+  overflow: TextOverflow.ellipsis,
+  textAlign: TextAlign.center,
+  style: const TextStyle(
+    fontWeight: FontWeight.bold,
+    fontSize: 12,
+  ),
+)
+
+
+
+          ],
+
+
+        ),
+
+
+      ),
+
+    );
+
+
+  }
+
+}
+
+
+
+
+
+
+class _SafetyCard extends StatelessWidget {
+
+
+  @override
+  Widget build(BuildContext context) {
+
+
+    return Container(
+
+      padding:
+      const EdgeInsets.all(18),
+
+
+      decoration:BoxDecoration(
+
+        color:
+        const Color(0xFFE8F5F2),
+
+        borderRadius:
+        BorderRadius.circular(18),
+
+      ),
+
+
+      child:const Row(
+
+        children:[
+
+
+          Icon(
+
+            Icons.health_and_safety,
+
+            color:
+            Color(0xFF00796B),
+
+          ),
+
+
+
+          SizedBox(width:12),
+
+
+
+          Expanded(
+
+            child:Column(
+
+              crossAxisAlignment:
+              CrossAxisAlignment.start,
+
+              children:[
+
+
+                Text(
+
+                  "Stay informed, Stay safe",
+
+                  style:TextStyle(
+
+                    fontWeight:
+                    FontWeight.bold,
+
+                  ),
+
+                ),
+
+
+
+                Text(
+
+                  "Use AI and ML to protect our community from dengue outbreaks.",
+
+                  style:TextStyle(
+
+                    fontSize:13,
+
+                  ),
+
+                )
+
+
+              ],
+
+            ),
+
+          )
+
+
+        ],
+
+      ),
+
+    );
+
+
+  }
+
+}
+
+
+
+
+
+
+
+Widget _MoreSection(BuildContext context){
+
+
+  return Column(
+
+    children:[
+
+
+      _MoreTile(
+
+        context,
+
+        "Warning History",
+
+        Icons.history,
+
+        const WarningHistoryScreen(),
+
+      ),
+
+
+
+      _MoreTile(
+
+        context,
+
+        "Intervention Feedback",
+
+        Icons.feedback,
+
+        const InterventionFeedbackScreen(),
+
+      ),
+
+
+
+      _MoreTile(
+
+        context,
+
+        "Explainable AI",
+
+        Icons.psychology,
+
+        const ExplainScreen(),
+
+      ),
+
+
+    ],
+
+  );
+
+
+}
+
+
+
+
+
+
+Widget _MoreTile(
+
+BuildContext context,
+
+String title,
+
+IconData icon,
+
+Widget page,
+
+){
+
+
+  return Card(
+
+    child:ListTile(
+
+      leading:Icon(
+
+        icon,
+
+        color:
+        const Color(0xFF00796B),
+
+      ),
+
+
+      title:Text(title),
+
+
+      trailing:
+      const Icon(
+        Icons.arrow_forward_ios,
+        size:16,
+      ),
+
+
+      onTap:(){
+
+        Navigator.push(
+
+          context,
+
+          MaterialPageRoute(
+
+            builder:(_)=>page,
+
+          ),
+
+        );
+
+      },
+
+    ),
+
+  );
+
+
 }
