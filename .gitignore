@@ -1,3 +1,6 @@
 __pycache__/
 *.pyc
 .env
+
+# NLP model files (large files)
+backend/Dengue_NLP_Model
