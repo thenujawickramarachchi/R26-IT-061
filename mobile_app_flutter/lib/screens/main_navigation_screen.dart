@@ -4,7 +4,6 @@ import 'home_screen.dart';
 import 'dashboard_screen.dart';
 import 'risk_map_screen.dart';
 import 'notification_screen.dart';
-import 'manual_prediction_screen.dart';
 
 
 class MainNavigationScreen extends StatefulWidget {
@@ -37,8 +36,6 @@ class _MainNavigationScreenState
     RiskMapScreen(),
 
     NotificationScreen(),
-
-    ManualPredictionScreen(),
 
   ];
 
@@ -125,18 +122,6 @@ class _MainNavigationScreenState
             selectedIcon: Icon(Icons.notifications),
 
             label: "Alerts",
-
-          ),
-
-
-
-          NavigationDestination(
-
-            icon: Icon(Icons.edit_note_outlined),
-
-            selectedIcon: Icon(Icons.edit_note),
-
-            label: "Manual",
 
           ),
 
