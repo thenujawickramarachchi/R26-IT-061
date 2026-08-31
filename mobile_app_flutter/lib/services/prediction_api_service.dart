@@ -317,6 +317,108 @@ class PredictionApiService {
     }
   }
 
+    Future<Map<String, dynamic>> getAreaFeatures({
+    required String area,
+    required int year,
+    required int week,
+  }) async {
+
+    final uri = Uri.parse(
+      '$_baseUrl/get-area-features'
+      '?area=${Uri.encodeComponent(area)}'
+      '&year=$year'
+      '&week=$week',
+    );
+
+
+    debugPrint('========== GET AREA FEATURES REQUEST ==========');
+    debugPrint('URL: $uri');
+
+
+    try {
+
+      final response = await http
+          .get(
+            uri,
+            headers: const {
+              'Accept': 'application/json',
+            },
+          )
+          .timeout(_requestTimeout);
+
+
+      debugPrint('Status code: ${response.statusCode}');
+      debugPrint('Response body: ${response.body}');
+
+
+      if (response.statusCode >= 200 &&
+          response.statusCode < 300) {
+
+        final decoded = jsonDecode(response.body);
+
+
+        if (decoded is Map<String, dynamic>) {
+          return decoded;
+        }
+
+
+        throw const PredictionApiException(
+          'Invalid area features response format.',
+        );
+
+      }
+
+
+      final errorData =
+          _tryDecodeJsonObject(response.body);
+
+      final message =
+          _extractErrorMessage(errorData);
+
+
+      if (message != null) {
+        throw PredictionApiException(message);
+      }
+
+
+      throw PredictionApiException(
+        'Failed to load area features '
+        '(status ${response.statusCode}).',
+      );
+
+
+    } on TimeoutException {
+
+      throw const PredictionApiException(
+        'Area features request timed out.',
+      );
+
+
+    } on SocketException {
+
+      throw const PredictionApiException(
+        'No internet connection.',
+      );
+
+
+    } on PredictionApiException {
+
+      rethrow;
+
+
+    } catch (error) {
+
+      debugPrint(
+        'GET AREA FEATURES ERROR: $error',
+      );
+
+      throw const PredictionApiException(
+        'Unable to load area features.',
+      );
+
+    }
+  }
+
   void _validatePredictionResponse(
     Map<String, dynamic> data,
   ) {
@@ -404,7 +506,51 @@ class PredictionApiService {
     }
 
     return null;
+
   }
+
+  Future<Map<String, dynamic>> predictHistorical({
+  required int year,
+  required int week,
+}) async {
+
+  final response = await http.post(
+
+    Uri.parse(
+      "$_baseUrl/predict-auto",
+    ),
+
+    headers: const {
+
+      "Content-Type": "application/json",
+
+    },
+
+    body: jsonEncode({
+
+      "year": year,
+
+      "week": week,
+
+    }),
+
+  );
+
+
+  if(response.statusCode == 200){
+
+    return Map<String,dynamic>.from(
+      jsonDecode(response.body),
+    );
+
+  }
+
+
+  throw const PredictionApiException(
+    "Historical prediction failed",
+  );
+
+}
 }
 
 class PredictionApiException implements Exception {
