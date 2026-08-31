@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'screens/home_screen.dart';
+import 'screens/main_navigation_screen.dart';
 
 void main() {
   runApp(const DenguePredictionApp());
@@ -32,7 +32,7 @@ class DenguePredictionApp extends StatelessWidget {
           border: OutlineInputBorder(),
         ),
       ),
-      home: const HomeScreen(),
+      home: const MainNavigationScreen(),
     );
   }
 }
