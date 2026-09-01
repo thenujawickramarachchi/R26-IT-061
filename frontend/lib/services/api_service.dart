@@ -7,7 +7,7 @@ class ApiService {
       "https://sahan-kaveesha-r26-it-061-dengue-api.hf.space";
 
 // ===========================
-// 📊 Today's Dashboard
+//  Today's Dashboard
 // ===========================
   static Future<Map<String, dynamic>> dashboard() async {
     final res = await http.get(
@@ -21,8 +21,8 @@ class ApiService {
     }
   }
 
-  // ===========================
-// 📈 Historical Trends
+// ===========================
+//  Historical Trends
 // ===========================
   static Future<List<dynamic>> history() async {
     final res = await http.get(
@@ -41,7 +41,7 @@ class ApiService {
   }
 
   // ===========================
-// 📈 REAL MODEL RISK TIMELINE
+// REAL MODEL RISK TIMELINE
 // ===========================
   static Future<List<dynamic>> riskTimeline() async {
     final res = await http.get(
@@ -56,7 +56,7 @@ class ApiService {
   }
 
   // ===========================
-// 📍 MOH Areas
+//  MOH Areas
 // ===========================
   static Future<List<dynamic>> mohRisk() async {
     final res = await http.get(
@@ -93,7 +93,7 @@ class ApiService {
   }
 
   // ===========================
-// 📍 AREA PROXY RISK
+//  AREA PROXY RISK
 // ===========================
   static Future<Map<String, dynamic>> predictAreaRisk({
     required String area,
@@ -166,7 +166,7 @@ class ApiService {
   }
 
   // ===========================
-// 🌐 GLOBAL SHAP EXPLANATION
+// GLOBAL SHAP EXPLANATION
 // ===========================
   static Future<List<dynamic>> shapGlobal() async {
     final res = await http.get(
@@ -189,7 +189,7 @@ class ApiService {
   }
 
   // ===========================
-  // 🔥 SAMPLE LATEST WEEK DATA
+  // SAMPLE LATEST WEEK DATA
   // ===========================
   static Future<Map<String, dynamic>> sampleInput() async {
     final res = await http.get(
@@ -204,7 +204,7 @@ class ApiService {
   }
 
   // ===========================
-// 🎯 LOCAL SHAP EXPLANATION
+//  LOCAL SHAP EXPLANATION
 // ===========================
   static Future<Map<String, dynamic>> shapLocal(
     Map<String, dynamic> data,
