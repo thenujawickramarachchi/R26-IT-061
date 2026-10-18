@@ -25,3 +25,29 @@ backend/Dengue_NLP_Model/
 # Operating system files
 .DS_Store
 Thumbs.db
+
+# Flutter generated files
+frontend/build/
+frontend/.dart_tool/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+
+# Android generated files
+frontend/android/.gradle/
+frontend/android/app/build/
+
+# Python virtual environments
+backend/.venv/
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Environment variables
+.env
+.env.*
+
+# NLP model files
+backend/Dengue_NLP_Model/
