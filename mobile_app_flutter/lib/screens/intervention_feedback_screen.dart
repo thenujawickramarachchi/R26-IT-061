@@ -11,7 +11,8 @@ class InterventionFeedbackScreen extends StatefulWidget {
       _InterventionFeedbackScreenState();
 }
 
-class _InterventionFeedbackScreenState extends State<InterventionFeedbackScreen> {
+class _InterventionFeedbackScreenState
+    extends State<InterventionFeedbackScreen> {
   static const Color _background = Color(0xFFF5F7FA);
   static const Color _ink = Color(0xFF172033);
   static const Color _muted = Color(0xFF667085);
@@ -131,7 +132,8 @@ class _InterventionFeedbackScreenState extends State<InterventionFeedbackScreen>
       return;
     }
 
-    final confirmed = await showDialog<bool>(
+    final confirmed =
+        await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Save intervention follow-up?'),
@@ -149,9 +151,7 @@ class _InterventionFeedbackScreenState extends State<InterventionFeedbackScreen>
                 child: const Text('Cancel'),
               ),
               FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: _blue,
-                ),
+                style: FilledButton.styleFrom(backgroundColor: _blue),
                 onPressed: () => Navigator.pop(context, true),
                 child: const Text('Save'),
               ),
@@ -211,13 +211,14 @@ class _InterventionFeedbackScreenState extends State<InterventionFeedbackScreen>
     return Scaffold(
       backgroundColor: _background,
       appBar: AppBar(
-        backgroundColor: _background,
-        foregroundColor: _ink,
+        backgroundColor: const Color(0xFF008577),
+        foregroundColor: Colors.white,
         elevation: 0,
-        centerTitle: true,
+        centerTitle: false,
+        titleSpacing: 8,
         title: const Text(
           'Intervention Follow-up',
-          style: TextStyle(fontWeight: FontWeight.w800),
+          style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white),
         ),
       ),
       body: _loading
@@ -252,13 +253,13 @@ class _InterventionFeedbackScreenState extends State<InterventionFeedbackScreen>
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(26),
         gradient: const LinearGradient(
-          colors: [_navy, _blue],
+          colors: [Color(0xFF00695C), Color(0xFF009688)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         boxShadow: [
           BoxShadow(
-            color: _navy.withValues(alpha: 0.16),
+            color: const Color(0xFF008577).withValues(alpha: 0.16),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -284,10 +285,7 @@ class _InterventionFeedbackScreenState extends State<InterventionFeedbackScreen>
           SizedBox(height: 6),
           Text(
             'Record PHI follow-up outcomes after an intervention has been completed.',
-            style: TextStyle(
-              color: Colors.white,
-              height: 1.4,
-            ),
+            style: TextStyle(color: Colors.white, height: 1.4),
           ),
         ],
       ),
@@ -335,10 +333,7 @@ class _InterventionFeedbackScreenState extends State<InterventionFeedbackScreen>
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
-                color: _ink,
-                height: 1.35,
-              ),
+              style: const TextStyle(color: _ink, height: 1.35),
             ),
           ),
           if (action != null) action,
@@ -369,9 +364,7 @@ class _InterventionFeedbackScreenState extends State<InterventionFeedbackScreen>
           const SizedBox(height: 6),
           const Text(
             'Select the original advisory and enter the follow-up outcome.',
-            style: TextStyle(
-              color: _muted,
-            ),
+            style: TextStyle(color: _muted),
           ),
           const SizedBox(height: 20),
           DropdownButtonFormField<int>(
@@ -388,10 +381,7 @@ class _InterventionFeedbackScreenState extends State<InterventionFeedbackScreen>
 
               return DropdownMenuItem<int>(
                 value: _asInt(warning['id']),
-                child: Text(
-                  '$area — $action',
-                  overflow: TextOverflow.ellipsis,
-                ),
+                child: Text('$area — $action', overflow: TextOverflow.ellipsis),
               );
             }).toList(),
             onChanged: (warningId) {
@@ -402,8 +392,9 @@ class _InterventionFeedbackScreenState extends State<InterventionFeedbackScreen>
                 final warning = _selectedWarning;
 
                 if (warning != null) {
-                  _casesAfterController.text =
-                      _asInt(warning['dengue_cases']).toString();
+                  _casesAfterController.text = _asInt(
+                    warning['dengue_cases'],
+                  ).toString();
                 }
               });
             },
@@ -442,18 +433,9 @@ class _InterventionFeedbackScreenState extends State<InterventionFeedbackScreen>
               Icons.analytics_outlined,
             ),
             items: const [
-              DropdownMenuItem(
-                value: 'improved',
-                child: Text('Improved'),
-              ),
-              DropdownMenuItem(
-                value: 'no_change',
-                child: Text('No change'),
-              ),
-              DropdownMenuItem(
-                value: 'worsened',
-                child: Text('Worsened'),
-              ),
+              DropdownMenuItem(value: 'improved', child: Text('Improved')),
+              DropdownMenuItem(value: 'no_change', child: Text('No change')),
+              DropdownMenuItem(value: 'worsened', child: Text('Worsened')),
             ],
             onChanged: (value) {
               setState(() => _outcome = value ?? 'improved');
@@ -482,19 +464,14 @@ class _InterventionFeedbackScreenState extends State<InterventionFeedbackScreen>
       decoration: BoxDecoration(
         color: const Color(0xFFEFF6FF),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFFBFDBFE),
-        ),
+        border: Border.all(color: const Color(0xFFBFDBFE)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             '${_areaOf(warning)} • ${_text(warning['risk_level'])}',
-            style: const TextStyle(
-              color: _ink,
-              fontWeight: FontWeight.w800,
-            ),
+            style: const TextStyle(color: _ink, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 5),
           Text(
@@ -510,11 +487,7 @@ class _InterventionFeedbackScreenState extends State<InterventionFeedbackScreen>
     );
   }
 
-  InputDecoration _decoration(
-    String label,
-    IconData icon, {
-    String? hint,
-  }) {
+  InputDecoration _decoration(String label, IconData icon, {String? hint}) {
     return InputDecoration(
       labelText: label,
       hintText: hint,
@@ -578,10 +551,7 @@ class _InterventionFeedbackScreenState extends State<InterventionFeedbackScreen>
         children: [
           const Row(
             children: [
-              Icon(
-                Icons.check_circle_outline_rounded,
-                color: _success,
-              ),
+              Icon(Icons.check_circle_outline_rounded, color: _success),
               SizedBox(width: 9),
               Text(
                 'Follow-up saved successfully',
@@ -594,10 +564,7 @@ class _InterventionFeedbackScreenState extends State<InterventionFeedbackScreen>
             ],
           ),
           const SizedBox(height: 12),
-          Text(
-            'Outcome reward: $reward',
-            style: const TextStyle(color: _ink),
-          ),
+          Text('Outcome reward: $reward', style: const TextStyle(color: _ink)),
           const SizedBox(height: 3),
           Text(
             updated

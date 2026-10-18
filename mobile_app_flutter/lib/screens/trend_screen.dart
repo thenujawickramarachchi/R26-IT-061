@@ -79,13 +79,9 @@ class _TrendScreenState extends State<TrendScreen> {
     final firstCases = cases.first;
     final latestCases = cases.last;
 
-    final highestCases = cases.reduce(
-      (a, b) => a > b ? a : b,
-    );
+    final highestCases = cases.reduce((a, b) => a > b ? a : b);
 
-    final lowestCases = cases.reduce(
-      (a, b) => a < b ? a : b,
-    );
+    final lowestCases = cases.reduce((a, b) => a < b ? a : b);
 
     final highestIndex = cases.indexOf(highestCases);
 
@@ -93,8 +89,9 @@ class _TrendScreenState extends State<TrendScreen> {
 
     final highestYear = history[highestIndex]["year"]?.toString() ?? "-";
 
-    final changePercent =
-        firstCases == 0 ? 0 : ((latestCases - firstCases) / firstCases) * 100;
+    final changePercent = firstCases == 0
+        ? 0
+        : ((latestCases - firstCases) / firstCases) * 100;
 
     String trendText;
 
@@ -221,25 +218,16 @@ class _TrendScreenState extends State<TrendScreen> {
     required IconData icon,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 12,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFF),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFFE5EBF7),
-        ),
+        border: Border.all(color: const Color(0xFFE5EBF7)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            size: 18,
-            color: const Color(0xFF5B4BFF),
-          ),
+          Icon(icon, size: 18, color: const Color(0xFF5B4BFF)),
           const SizedBox(height: 8),
           Text(
             title,
@@ -317,9 +305,7 @@ class _TrendScreenState extends State<TrendScreen> {
               decoration: BoxDecoration(
                 color: const Color(0xFFF7F9FD),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: const Color(0xFFE8EDF6),
-                ),
+                border: Border.all(color: const Color(0xFFE8EDF6)),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -416,9 +402,7 @@ class _TrendScreenState extends State<TrendScreen> {
     if (loading) {
       return const Scaffold(
         backgroundColor: Color(0xFFF7F9FD),
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
+        body: Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -429,70 +413,59 @@ class _TrendScreenState extends State<TrendScreen> {
 
     final avgRainfall = history.isNotEmpty
         ? history
-                .map((e) => ((e["rainfall_mm"] ?? 0) as num).toDouble())
-                .reduce((a, b) => a + b) /
-            history.length
+                  .map((e) => ((e["rainfall_mm"] ?? 0) as num).toDouble())
+                  .reduce((a, b) => a + b) /
+              history.length
         : 0;
 
     final avgHumidity = history.isNotEmpty
         ? history
-                .map((e) => ((e["humidity_pct"] ?? 0) as num).toDouble())
-                .reduce((a, b) => a + b) /
-            history.length
+                  .map((e) => ((e["humidity_pct"] ?? 0) as num).toDouble())
+                  .reduce((a, b) => a + b) /
+              history.length
         : 0;
 
     final avgTemp = history.isNotEmpty
         ? history
-                .map((e) => ((e["temp_mean_c"] ?? 0) as num).toDouble())
-                .reduce((a, b) => a + b) /
-            history.length
+                  .map((e) => ((e["temp_mean_c"] ?? 0) as num).toDouble())
+                  .reduce((a, b) => a + b) /
+              history.length
         : 0;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FD),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF7F9FD),
+        backgroundColor: const Color(0xFF008577),
+        foregroundColor: Colors.white,
         elevation: 0,
-        title: Row(
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: const Color(0xFFEFF4FF),
-                borderRadius: BorderRadius.circular(14),
+        toolbarHeight: 76,
+        centerTitle: false,
+        titleSpacing: 8,
+        title: const Padding(
+          padding: EdgeInsets.only(top: 8),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Trend Analysis",
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                ),
               ),
-              child: const Icon(
-                Icons.show_chart,
-                color: Color(0xFF5B4BFF),
+              SizedBox(height: 2),
+              Text(
+                "Colombo district outbreak trends",
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFFE0F2F1),
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Trend Analysis",
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF172033),
-                    ),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    "Colombo district outbreak trends",
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF8A94A6),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       body: RefreshIndicator(
@@ -539,9 +512,7 @@ class _TrendScreenState extends State<TrendScreen> {
                         decoration: BoxDecoration(
                           color: const Color(0xFFEFFBFD),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: const Color(0xFFD5F1F5),
-                          ),
+                          border: Border.all(color: const Color(0xFFD5F1F5)),
                         ),
                         child: const Text(
                           "12 WEEKS",
@@ -616,10 +587,7 @@ class _TrendScreenState extends State<TrendScreen> {
                                 return Padding(
                                   padding: const EdgeInsets.only(top: 8),
                                   child: Text(
-                                    label.replaceFirst(
-                                      RegExp(r'^\d{4}-'),
-                                      '',
-                                    ),
+                                    label.replaceFirst(RegExp(r'^\d{4}-'), ''),
                                     style: const TextStyle(
                                       color: Color(0xFF8A94A6),
                                       fontSize: 9,
@@ -639,8 +607,9 @@ class _TrendScreenState extends State<TrendScreen> {
                             color: const Color(0xFF17B6CF),
                             belowBarData: BarAreaData(
                               show: true,
-                              color: const Color(0xFF17B6CF)
-                                  .withValues(alpha: 0.15),
+                              color: const Color(
+                                0xFF17B6CF,
+                              ).withValues(alpha: 0.15),
                             ),
                             dotData: const FlDotData(show: true),
                           ),
@@ -712,10 +681,7 @@ class _TrendScreenState extends State<TrendScreen> {
                             },
                           ),
 
-                          getTouchedSpotIndicator: (
-                            barData,
-                            spotIndexes,
-                          ) {
+                          getTouchedSpotIndicator: (barData, spotIndexes) {
                             return spotIndexes.map((index) {
                               return TouchedSpotIndicatorData(
                                 const FlLine(
@@ -725,19 +691,15 @@ class _TrendScreenState extends State<TrendScreen> {
                                 ),
                                 FlDotData(
                                   show: true,
-                                  getDotPainter: (
-                                    spot,
-                                    percent,
-                                    barData,
-                                    index,
-                                  ) {
-                                    return FlDotCirclePainter(
-                                      radius: 6,
-                                      color: const Color(0xFF17B6CF),
-                                      strokeWidth: 3,
-                                      strokeColor: Colors.white,
-                                    );
-                                  },
+                                  getDotPainter:
+                                      (spot, percent, barData, index) {
+                                        return FlDotCirclePainter(
+                                          radius: 6,
+                                          color: const Color(0xFF17B6CF),
+                                          strokeWidth: 3,
+                                          strokeColor: Colors.white,
+                                        );
+                                      },
                                 ),
                               );
                             }).toList();
@@ -751,40 +713,40 @@ class _TrendScreenState extends State<TrendScreen> {
             ).animate().fade(duration: 700.ms).slideY(begin: 0.25, end: 0),
             const SizedBox(height: 20),
             softCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Climate Averages",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF172033),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      climateItem(
-                        "Rainfall",
-                        "${avgRainfall.toStringAsFixed(1)} mm",
-                        Icons.water_drop,
+                      const Text(
+                        "Climate Averages",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF172033),
+                        ),
                       ),
-                      climateItem(
-                        "Humidity",
-                        "${avgHumidity.toStringAsFixed(1)}%",
-                        Icons.opacity,
-                      ),
-                      climateItem(
-                        "Temperature",
-                        "${avgTemp.toStringAsFixed(1)}°C",
-                        Icons.thermostat,
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          climateItem(
+                            "Rainfall",
+                            "${avgRainfall.toStringAsFixed(1)} mm",
+                            Icons.water_drop,
+                          ),
+                          climateItem(
+                            "Humidity",
+                            "${avgHumidity.toStringAsFixed(1)}%",
+                            Icons.opacity,
+                          ),
+                          climateItem(
+                            "Temperature",
+                            "${avgTemp.toStringAsFixed(1)}°C",
+                            Icons.thermostat,
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
-            )
+                )
                 .animate(delay: 150.ms)
                 .fade(duration: 700.ms)
                 .slideY(begin: 0.25, end: 0),
@@ -812,9 +774,7 @@ class _TrendScreenState extends State<TrendScreen> {
         decoration: BoxDecoration(
           color: const Color(0xFFF8FAFF),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: const Color(0xFFE3EAF8),
-          ),
+          border: Border.all(color: const Color(0xFFE3EAF8)),
         ),
         child: Column(
           children: [
@@ -825,10 +785,7 @@ class _TrendScreenState extends State<TrendScreen> {
                 color: const Color(0xFFEFF4FF),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(
-                icon,
-                color: const Color(0xFF5B4BFF),
-              ),
+              child: Icon(icon, color: const Color(0xFF5B4BFF)),
             ),
             const SizedBox(height: 12),
             Text(

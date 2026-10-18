@@ -118,8 +118,7 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
           String? confidenceLevel;
 
           if (dataContext is Map) {
-            confidenceLevel =
-                dataContext["confidence_level"]?.toString();
+            confidenceLevel = dataContext["confidence_level"]?.toString();
           }
 
           loadedAreas.add({
@@ -144,9 +143,7 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
           );
         } catch (e) {
           // One failed area should not break the entire map.
-          debugPrint(
-            "Prediction failed for $areaName: $e",
-          );
+          debugPrint("Prediction failed for $areaName: $e");
         }
       }
 
@@ -198,24 +195,19 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
     return item?.toString().trim();
   }
 
-  Map<String, dynamic> _extractProbabilities(
-    Map<String, dynamic> prediction,
-  ) {
+  Map<String, dynamic> _extractProbabilities(Map<String, dynamic> prediction) {
     final rawProbabilities = prediction["probabilities"];
 
     if (rawProbabilities is Map) {
       return {
         "High": _normalizeProbability(
-          rawProbabilities["High"] ??
-              rawProbabilities["high"],
+          rawProbabilities["High"] ?? rawProbabilities["high"],
         ),
         "Medium": _normalizeProbability(
-          rawProbabilities["Medium"] ??
-              rawProbabilities["medium"],
+          rawProbabilities["Medium"] ?? rawProbabilities["medium"],
         ),
         "Low": _normalizeProbability(
-          rawProbabilities["Low"] ??
-              rawProbabilities["low"],
+          rawProbabilities["Low"] ?? rawProbabilities["low"],
         ),
       };
     }
@@ -276,28 +268,17 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
   }
 
   int _isoWeekNumber(DateTime date) {
-    final normalized = DateTime.utc(
-      date.year,
-      date.month,
-      date.day,
-    );
+    final normalized = DateTime.utc(date.year, date.month, date.day);
 
-    final thursday = normalized.add(
-      Duration(days: 4 - normalized.weekday),
-    );
+    final thursday = normalized.add(Duration(days: 4 - normalized.weekday));
 
-    final firstThursday = DateTime.utc(
-      thursday.year,
-      1,
-      4,
-    );
+    final firstThursday = DateTime.utc(thursday.year, 1, 4);
 
     final firstWeekThursday = firstThursday.add(
       Duration(days: 4 - firstThursday.weekday),
     );
 
-    return 1 +
-        thursday.difference(firstWeekThursday).inDays ~/ 7;
+    return 1 + thursday.difference(firstWeekThursday).inDays ~/ 7;
   }
 
   Color riskColor(String risk) {
@@ -335,8 +316,7 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
   Widget mohMarker(Map<String, dynamic> area) {
     final risk = area["risk"].toString();
     final color = riskColor(risk);
-    final isSelected =
-        selectedArea?["name"] == area["name"];
+    final isSelected = selectedArea?["name"] == area["name"];
 
     return GestureDetector(
       onTap: () {
@@ -352,10 +332,7 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
           decoration: BoxDecoration(
             color: color,
             shape: BoxShape.circle,
-            border: Border.all(
-              color: Colors.white,
-              width: 3,
-            ),
+            border: Border.all(color: Colors.white, width: 3),
             boxShadow: [
               BoxShadow(
                 color: color.withValues(alpha: 0.45),
@@ -369,19 +346,13 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
     );
   }
 
-  Widget legendItem(
-    String label,
-    Color color,
-  ) {
+  Widget legendItem(String label, Color color) {
     return Row(
       children: [
         Container(
           width: 14,
           height: 14,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 7),
         Text(
@@ -396,10 +367,9 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
   }
 
   Widget areaInfoCard() {
-    final contextText =
-        predictionYear != null && predictionWeek != null
-            ? "Year $predictionYear • Week $predictionWeek"
-            : "Latest available prediction context";
+    final contextText = predictionYear != null && predictionWeek != null
+        ? "Year $predictionYear • Week $predictionWeek"
+        : "Latest available prediction context";
 
     return Positioned(
       top: 18,
@@ -420,15 +390,11 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
         ),
         child: Row(
           children: [
-            const Icon(
-              Icons.location_on,
-              color: Color(0xFF5B4BFF),
-            ),
+            const Icon(Icons.location_on, color: Color(0xFF5B4BFF)),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     "Colombo District MOH Surveillance Map",
@@ -461,41 +427,27 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
       return const SizedBox.shrink();
     }
 
-    final name =
-        selectedArea!["name"]?.toString() ?? "Unknown";
+    final name = selectedArea!["name"]?.toString() ?? "Unknown";
 
-    final risk =
-        selectedArea!["risk"]?.toString() ?? "Unknown";
+    final risk = selectedArea!["risk"]?.toString() ?? "Unknown";
 
     final color = riskColor(risk);
 
-    final rawProbabilities =
-        selectedArea!["probabilities"];
+    final rawProbabilities = selectedArea!["probabilities"];
 
-    final probabilities =
-        rawProbabilities is Map
-            ? Map<String, dynamic>.from(
-                rawProbabilities,
-              )
-            : <String, dynamic>{};
+    final probabilities = rawProbabilities is Map
+        ? Map<String, dynamic>.from(rawProbabilities)
+        : <String, dynamic>{};
 
-    final high = _normalizeProbability(
-      probabilities["High"],
-    );
+    final high = _normalizeProbability(probabilities["High"]);
 
-    final medium = _normalizeProbability(
-      probabilities["Medium"],
-    );
+    final medium = _normalizeProbability(probabilities["Medium"]);
 
-    final low = _normalizeProbability(
-      probabilities["Low"],
-    );
+    final low = _normalizeProbability(probabilities["Low"]);
 
-    final year =
-        selectedArea!["year"]?.toString();
+    final year = selectedArea!["year"]?.toString();
 
-    final week =
-        selectedArea!["week"]?.toString();
+    final week = selectedArea!["week"]?.toString();
 
     return Positioned(
       left: 18,
@@ -506,9 +458,7 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.98),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: color.withValues(alpha: 0.22),
-          ),
+          border: Border.all(color: color.withValues(alpha: 0.22)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.10),
@@ -526,10 +476,8 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color:
-                        color.withValues(alpha: 0.12),
-                    borderRadius:
-                        BorderRadius.circular(16),
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Icon(
                     Icons.location_on_rounded,
@@ -540,8 +488,7 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         name,
@@ -560,16 +507,14 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      if (year != null &&
-                          week != null) ...[
+                      if (year != null && week != null) ...[
                         const SizedBox(height: 3),
                         Text(
                           "Year $year • Week $week",
                           style: const TextStyle(
                             color: Color(0xFF98A2B3),
                             fontSize: 9.5,
-                            fontWeight:
-                                FontWeight.w700,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ],
@@ -594,16 +539,13 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
             Row(
               children: [
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(
+                  padding: const EdgeInsets.symmetric(
                     horizontal: 12,
                     vertical: 7,
                   ),
                   decoration: BoxDecoration(
-                    color:
-                        color.withValues(alpha: 0.12),
-                    borderRadius:
-                        BorderRadius.circular(20),
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     "$risk Risk",
@@ -653,35 +595,21 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            probabilityRow(
-              "High",
-              high,
-              const Color(0xFFFF477E),
-            ),
+            probabilityRow("High", high, const Color(0xFFFF477E)),
             const SizedBox(height: 10),
-            probabilityRow(
-              "Medium",
-              medium,
-              const Color(0xFFFFA726),
-            ),
+            probabilityRow("Medium", medium, const Color(0xFFFFA726)),
             const SizedBox(height: 10),
-            probabilityRow(
-              "Low",
-              low,
-              const Color(0xFF18A982),
-            ),
+            probabilityRow("Low", low, const Color(0xFF18A982)),
             const SizedBox(height: 16),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: const Color(0xFFF7F8FC),
-                borderRadius:
-                    BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Icon(
                     Icons.auto_awesome_rounded,
@@ -691,8 +619,7 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      selectedArea!["model_used"]
-                              ?.toString() ??
+                      selectedArea!["model_used"]?.toString() ??
                           "ML model-based area proxy risk assessment",
                       style: const TextStyle(
                         color: Color(0xFF5F6B7A),
@@ -704,12 +631,10 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
                 ],
               ),
             ),
-            if (selectedArea!["important_note"] !=
-                null) ...[
+            if (selectedArea!["important_note"] != null) ...[
               const SizedBox(height: 12),
               Text(
-                selectedArea!["important_note"]
-                    .toString(),
+                selectedArea!["important_note"].toString(),
                 style: const TextStyle(
                   color: Color(0xFF7A879A),
                   fontSize: 9.5,
@@ -723,13 +648,8 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
     );
   }
 
-  Widget probabilityRow(
-    String label,
-    double value,
-    Color color,
-  ) {
-    final safeValue =
-        value.clamp(0.0, 100.0);
+  Widget probabilityRow(String label, double value, Color color) {
+    final safeValue = value.clamp(0.0, 100.0);
 
     final percentage = safeValue / 100;
 
@@ -758,14 +678,12 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
         ),
         const SizedBox(height: 6),
         ClipRRect(
-          borderRadius:
-              BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(10),
           child: LinearProgressIndicator(
             value: percentage,
             minHeight: 7,
             color: color,
-            backgroundColor:
-                color.withValues(alpha: 0.12),
+            backgroundColor: color.withValues(alpha: 0.12),
           ),
         ),
       ],
@@ -775,10 +693,7 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
   List<Map<String, dynamic>> mapSource() {
     return areas
         .whereType<Map>()
-        .map<Map<String, dynamic>>(
-          (area) =>
-              Map<String, dynamic>.from(area),
-        )
+        .map<Map<String, dynamic>>((area) => Map<String, dynamic>.from(area))
         .toList();
   }
 
@@ -787,8 +702,7 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
       final latValue = area["lat"];
       final lngValue = area["lng"];
 
-      if (latValue is! num ||
-          lngValue is! num) {
+      if (latValue is! num || lngValue is! num) {
         return const Marker(
           point: LatLng(6.9010, 79.8700),
           width: 0,
@@ -798,10 +712,7 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
       }
 
       return Marker(
-        point: LatLng(
-          latValue.toDouble(),
-          lngValue.toDouble(),
-        ),
+        point: LatLng(latValue.toDouble(), lngValue.toDouble()),
         width: 44,
         height: 44,
         child: mohMarker(area),
@@ -811,11 +722,8 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
 
   Widget _errorView() {
     return Scaffold(
-      backgroundColor:
-          const Color(0xFFF5F7FB),
-      appBar: AppBar(
-        title: const Text("MOH Risk Map"),
-      ),
+      backgroundColor: const Color(0xFFF5F7FB),
+      appBar: AppBar(title: const Text("MOH Risk Map")),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -829,8 +737,7 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                errorMessage ??
-                    "Risk map data is unavailable.",
+                errorMessage ?? "Risk map data is unavailable.",
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: Color(0xFF65758E),
@@ -841,9 +748,7 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
               const SizedBox(height: 18),
               FilledButton.icon(
                 onPressed: loadMap,
-                icon: const Icon(
-                  Icons.refresh_rounded,
-                ),
+                icon: const Icon(Icons.refresh_rounded),
                 label: const Text("Try Again"),
               ),
             ],
@@ -856,86 +761,35 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const Scaffold(
-        body: Center(
-          child:
-              CircularProgressIndicator(),
-        ),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    if (errorMessage != null &&
-        areas.isEmpty) {
+    if (errorMessage != null && areas.isEmpty) {
       return _errorView();
     }
 
     return Scaffold(
-      backgroundColor:
-          const Color(0xFFF5F7FB),
+      backgroundColor: const Color(0xFFF5F7FB),
       appBar: AppBar(
-        backgroundColor:
-            const Color(0xFFF5F7FB),
-        foregroundColor:
-            const Color(0xFF172033),
+        backgroundColor: const Color(0xFF008577),
+        foregroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
-        surfaceTintColor:
-            Colors.transparent,
-        title: Row(
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color:
-                    const Color(0xFFEFF4FF),
-                borderRadius:
-                    BorderRadius.circular(14),
-              ),
-              child: const Icon(
-                Icons.map,
-                color: Color(0xFF5B4BFF),
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "MOH Risk Map",
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight:
-                          FontWeight.w900,
-                      color:
-                          Color(0xFF172033),
-                    ),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    "Colombo District area proxy context",
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight:
-                          FontWeight.w700,
-                      color:
-                          Color(0xFF8A94A6),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+        surfaceTintColor: Colors.transparent,
+        centerTitle: true,
+        title: const Text(
+          "MOH Risk Map",
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w900,
+            color: Colors.white,
+          ),
         ),
         actions: [
           IconButton(
             tooltip: "Refresh",
             onPressed: loadMap,
-            icon: const Icon(
-              Icons.refresh_rounded,
-            ),
+            icon: const Icon(Icons.refresh_rounded, color: Colors.white),
           ),
         ],
       ),
@@ -943,11 +797,7 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
         children: [
           FlutterMap(
             options: MapOptions(
-              initialCenter:
-                  const LatLng(
-                6.8700,
-                79.9300,
-              ),
+              initialCenter: const LatLng(6.8700, 79.9300),
               initialZoom: 10.8,
               minZoom: 9.5,
               maxZoom: 16,
@@ -959,14 +809,10 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
             ),
             children: [
               TileLayer(
-                urlTemplate:
-                    'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName:
-                    'com.example.dengue_app',
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.example.dengue_app',
               ),
-              MarkerLayer(
-                markers: buildMarkers(),
-              ),
+              MarkerLayer(markers: buildMarkers()),
             ],
           ),
           areaInfoCard(),
@@ -976,39 +822,24 @@ class _RiskMapScreenState extends State<RiskMapScreen> {
             left: 18,
             right: 18,
             child: Container(
-              padding:
-                  const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white
-                    .withValues(alpha: 0.96),
-                borderRadius:
-                    BorderRadius.circular(20),
+                color: Colors.white.withValues(alpha: 0.96),
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black
-                        .withValues(alpha: 0.08),
+                    color: Colors.black.withValues(alpha: 0.08),
                     blurRadius: 16,
-                    offset:
-                        const Offset(0, 6),
+                    offset: const Offset(0, 6),
                   ),
                 ],
               ),
               child: Row(
-                mainAxisAlignment:
-                    MainAxisAlignment.spaceAround,
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  legendItem(
-                    "High",
-                    const Color(0xFFFF2F6D),
-                  ),
-                  legendItem(
-                    "Medium",
-                    Colors.orange,
-                  ),
-                  legendItem(
-                    "Low",
-                    Colors.green,
-                  ),
+                  legendItem("High", const Color(0xFFFF2F6D)),
+                  legendItem("Medium", Colors.orange),
+                  legendItem("Low", Colors.green),
                 ],
               ),
             ),

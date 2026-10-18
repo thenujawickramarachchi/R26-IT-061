@@ -27,9 +27,7 @@ class _ExplainScreenState extends State<ExplainScreen> {
     loadXai();
   }
 
-  Widget shimmerCard({
-    double height = 140,
-  }) {
+  Widget shimmerCard({double height = 140}) {
     return Shimmer.fromColors(
       baseColor: Colors.grey.shade300,
       highlightColor: Colors.grey.shade100,
@@ -55,9 +53,7 @@ class _ExplainScreenState extends State<ExplainScreen> {
       final currentConfidence = dashboard["confidence"];
 
       if (currentRisk == null || currentConfidence == null) {
-        throw Exception(
-          "Dashboard prediction data is unavailable",
-        );
+        throw Exception("Dashboard prediction data is unavailable");
       }
 
       // =====================================================
@@ -68,9 +64,7 @@ class _ExplainScreenState extends State<ExplainScreen> {
       final week = dashboard["week"];
 
       if (year == null || week == null) {
-        throw Exception(
-          "Dashboard year/week data is unavailable",
-        );
+        throw Exception("Dashboard year/week data is unavailable");
       }
 
       // =====================================================
@@ -90,9 +84,7 @@ class _ExplainScreenState extends State<ExplainScreen> {
       final rawLocal = localResponse["local_shap"];
 
       if (rawLocal == null || rawLocal is! List) {
-        throw Exception(
-          "Local SHAP data is unavailable",
-        );
+        throw Exception("Local SHAP data is unavailable");
       }
 
       // =====================================================
@@ -100,9 +92,7 @@ class _ExplainScreenState extends State<ExplainScreen> {
       // =====================================================
       final parsedLocal = rawLocal.map((item) {
         if (item is! Map) {
-          throw Exception(
-            "Invalid Local SHAP item",
-          );
+          throw Exception("Invalid Local SHAP item");
         }
 
         final shapValue = (item["shap_value"] as num?)?.toDouble();
@@ -112,9 +102,7 @@ class _ExplainScreenState extends State<ExplainScreen> {
         final feature = item["feature"]?.toString();
 
         if (feature == null || shapValue == null || featureValue == null) {
-          throw Exception(
-            "Invalid Local SHAP response",
-          );
+          throw Exception("Invalid Local SHAP response");
         }
 
         return {
@@ -182,11 +170,7 @@ class _ExplainScreenState extends State<ExplainScreen> {
     return Colors.grey;
   }
 
-  double normalize(
-    dynamic value,
-    List<dynamic> list,
-    String key,
-  ) {
+  double normalize(dynamic value, List<dynamic> list, String key) {
     if (list.isEmpty || value is! num) {
       return 0;
     }
@@ -204,9 +188,7 @@ class _ExplainScreenState extends State<ExplainScreen> {
       return 0;
     }
 
-    final maxValue = values.reduce(
-      (a, b) => a > b ? a : b,
-    );
+    final maxValue = values.reduce((a, b) => a > b ? a : b);
 
     if (maxValue == 0) {
       return 0;
@@ -275,17 +257,11 @@ class _ExplainScreenState extends State<ExplainScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const CircleAvatar(
-            radius: 4,
-            backgroundColor: Color(0xFFFF2F6D),
-          ),
+          const CircleAvatar(radius: 4, backgroundColor: Color(0xFFFF2F6D)),
           const SizedBox(width: 7),
           Text(
             label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -319,13 +295,14 @@ class _ExplainScreenState extends State<ExplainScreen> {
             alignment: Alignment.center,
             children: [
               SizedBox(
-                width: 90,
-                height: 90,
+                width: 74,
+                height: 74,
                 child: CircularProgressIndicator(
-                  value: percent,
-                  strokeWidth: 9,
-                  backgroundColor: Colors.grey.shade200,
-                  valueColor: AlwaysStoppedAnimation(gaugeColor),
+                  value: (confidence / 100).clamp(0.0, 1.0),
+                  strokeWidth: 4,
+                  backgroundColor: const Color(0xFFE8EDF5),
+                  valueColor: AlwaysStoppedAnimation<Color>(gaugeColor),
+                  strokeCap: StrokeCap.round,
                 ),
               ),
               Column(
@@ -377,23 +354,21 @@ class _ExplainScreenState extends State<ExplainScreen> {
 
     final displayShap = shapValue.abs().toStringAsFixed(4);
 
-    final accentColor =
-        isPositive ? const Color(0xFFFF477E) : const Color(0xFF00A6A6);
+    final accentColor = isPositive
+        ? const Color(0xFFFF477E)
+        : const Color(0xFF00A6A6);
 
-    final backgroundColor =
-        isPositive ? const Color(0xFFFFF3F6) : const Color(0xFFF0FAFA);
+    final backgroundColor = isPositive
+        ? const Color(0xFFFFF3F6)
+        : const Color(0xFFF0FAFA);
 
     return Container(
-      constraints: const BoxConstraints(
-        minWidth: 155,
-      ),
+      constraints: const BoxConstraints(minWidth: 155),
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: accentColor.withValues(alpha: 0.16),
-        ),
+        border: Border.all(color: accentColor.withValues(alpha: 0.16)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -469,14 +444,12 @@ class _ExplainScreenState extends State<ExplainScreen> {
     );
   }
 
-  Widget shapImpactBar({
-    required String label,
-    required double value,
-  }) {
+  Widget shapImpactBar({required String label, required double value}) {
     final isPositive = value >= 0;
 
-    final color =
-        isPositive ? const Color(0xFFFF2F6D) : const Color(0xFF00A884);
+    final color = isPositive
+        ? const Color(0xFFFF2F6D)
+        : const Color(0xFF00A884);
 
     final percent = (value.abs() * 100).clamp(8, 100);
 
@@ -506,7 +479,7 @@ class _ExplainScreenState extends State<ExplainScreen> {
               ),
               const SizedBox(width: 4),
               Text(
-                isPositive ? "Risk Increase" : "Risk Reduction",
+                isPositive ? "Positive contribution" : "Negative contribution",
                 style: TextStyle(
                   color: color,
                   fontWeight: FontWeight.w700,
@@ -530,20 +503,53 @@ class _ExplainScreenState extends State<ExplainScreen> {
     );
   }
 
+  String _factorDescription(String feature) {
+    final name = feature.toLowerCase();
+
+    if (name.contains('temp')) {
+      return 'Affects mosquito development and virus growth.';
+    } else if (name.contains('humid')) {
+      return 'Influences mosquito survival and activity.';
+    } else if (name.contains('rain') || name.contains('precipitation')) {
+      return 'Can create mosquito breeding sites.';
+    }
+
+    return 'This factor helps identify dengue patterns.';
+  }
+
   Widget globalImportanceCard() {
     if (globalShap.isEmpty) {
       return const SizedBox.shrink();
     }
 
-    final validGlobalShap = globalShap.where((item) {
-      return item is Map &&
-          item["feature"] != null &&
-          item["importance"] is num;
-    }).toList();
+    final validGlobalShap =
+        globalShap.where((item) {
+          return item is Map &&
+              item["feature"] != null &&
+              item["importance"] is num;
+        }).toList()..sort(
+          (a, b) => (b["importance"] as num).compareTo(a["importance"] as num),
+        );
 
     if (validGlobalShap.isEmpty) {
       return const SizedBox.shrink();
     }
+
+    final displayedFactors = validGlobalShap.take(6).toList();
+
+    final topFeature = _friendlyGlobalFeature(
+      displayedFactors.first["feature"].toString(),
+    );
+
+    final maxImportance =
+        (displayedFactors
+                .map((item) => (item["importance"] as num).abs())
+                .fold<double>(
+                  0.0,
+                  (previous, value) =>
+                      value.toDouble() > previous ? value.toDouble() : previous,
+                ))
+            .toDouble();
 
     return SoftCard(
       color: Colors.white,
@@ -551,25 +557,19 @@ class _ExplainScreenState extends State<ExplainScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: 46,
+                height: 46,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [
-                      Color(0xFFF1F2FF),
-                      Color(0xFFE8E9FF),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(14),
+                  color: const Color(0xFFEEE9FF),
+                  borderRadius: BorderRadius.circular(15),
                 ),
                 child: const Icon(
-                  Icons.layers_rounded,
-                  color: Color(0xFF5B5CE2),
-                  size: 22,
+                  Icons.insights_rounded,
+                  color: Color(0xFF5B4BFF),
+                  size: 25,
                 ),
               ),
               const SizedBox(width: 12),
@@ -578,97 +578,109 @@ class _ExplainScreenState extends State<ExplainScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Overall Feature Importance",
+                      "Which Factors Matter Most to the AI?",
                       style: TextStyle(
                         color: Color(0xFF172033),
-                        fontSize: 17,
+                        fontSize: 16,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                    SizedBox(height: 3),
+                    SizedBox(height: 4),
                     Text(
-                      "SHAP analysis",
+                      "Overall feature importance",
                       style: TextStyle(
                         color: Color(0xFF7E8A9D),
                         fontSize: 11,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF1F2FF),
+                  color: const Color(0xFFF1F0FF),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  "${validGlobalShap.length} factors",
+                  "${displayedFactors.length} factors",
                   style: const TextStyle(
-                    color: Color(0xFF5B5CE2),
-                    fontSize: 9,
-                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF5B4BFF),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
             ],
           ),
+
           const SizedBox(height: 18),
+
+          // Explain what global importance means in simple language.
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xFFF7F8FF),
+              color: const Color(0xFFF5F4FF),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: const Color(0xFFE9EBFF),
-              ),
+              border: Border.all(color: const Color(0xFFE7E3FF)),
             ),
-            child: const Row(
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  Icons.info_outline_rounded,
-                  size: 18,
-                  color: Color(0xFF5B5CE2),
+                const Icon(
+                  Icons.lightbulb_outline_rounded,
+                  color: Color(0xFF5B4BFF),
+                  size: 20,
                 ),
-                SizedBox(width: 9),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    "This section shows which environmental factors have the strongest overall influence across the trained dengue prediction model.",
-                    style: TextStyle(
-                      color: Color(0xFF65758E),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      height: 1.45,
+                    "$topFeature is the most important feature "
+                    "among those shown across the overall results. "
+                    "This does not necessarily mean it contributed most "
+                    "to the current prediction.",
+                    style: const TextStyle(
+                      color: Color(0xFF536174),
+                      fontSize: 12,
+                      height: 1.5,
                     ),
                   ),
                 ),
               ],
             ),
           ),
+
           const SizedBox(height: 20),
-          ...validGlobalShap.take(6).toList().asMap().entries.map((entry) {
+
+          const Text(
+            "FEATURE RANKING",
+            style: TextStyle(
+              color: Color(0xFF8792A6),
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.0,
+            ),
+          ),
+
+          const SizedBox(height: 14),
+
+          ...displayedFactors.asMap().entries.map((entry) {
             final index = entry.key;
             final item = entry.value;
 
-            final feature = item["feature"].toString();
-
+            final rawFeature = item["feature"].toString();
+            final feature = _friendlyGlobalFeature(rawFeature);
             final importance = (item["importance"] as num).toDouble();
 
-            final normalized = normalize(
-              importance,
-              validGlobalShap,
-              "importance",
-            );
+            final normalized = maxImportance == 0
+                ? 0.0
+                : (importance.abs() / maxImportance).clamp(0.0, 1.0).toDouble();
 
             return Padding(
               padding: EdgeInsets.only(
-                bottom: index == validGlobalShap.take(6).length - 1 ? 0 : 18,
+                bottom: index == displayedFactors.length - 1 ? 0 : 12,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -676,29 +688,29 @@ class _ExplainScreenState extends State<ExplainScreen> {
                   Row(
                     children: [
                       Container(
-                        width: 26,
-                        height: 26,
+                        width: 28,
+                        height: 28,
+                        alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFEEF0FF),
+                          color: const Color(0xFFEFEDFF),
                           shape: BoxShape.circle,
                         ),
-                        alignment: Alignment.center,
                         child: Text(
                           "${index + 1}",
                           style: const TextStyle(
-                            color: Color(0xFF5B5CE2),
-                            fontSize: 10,
+                            color: Color(0xFF5B4BFF),
+                            fontSize: 11,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 9),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           feature,
                           style: const TextStyle(
-                            color: Color(0xFF536174),
-                            fontSize: 12,
+                            color: Color(0xFF263247),
+                            fontSize: 13,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -713,15 +725,79 @@ class _ExplainScreenState extends State<ExplainScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+
+                  const SizedBox(height: 9),
+
                   ClipRRect(
                     borderRadius: BorderRadius.circular(20),
                     child: LinearProgressIndicator(
                       value: normalized,
-                      minHeight: 7,
+                      minHeight: 6,
                       backgroundColor: const Color(0xFFE9EDF5),
                       valueColor: const AlwaysStoppedAnimation<Color>(
-                        Color(0xFF5B5CE2),
+                        Color(0xFF6A5DF5),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 5),
+
+                  Text(
+                    index == 0
+                        ? "Highest overall importance"
+                        : "Ranked ${index + 1} by importance",
+                    style: const TextStyle(
+                      color: Color(0xFF8994A7),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFAF9FF),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE3E0FF)),
+                    ),
+                    child: Theme(
+                      data: Theme.of(
+                        context,
+                      ).copyWith(dividerColor: Colors.transparent),
+                      child: ExpansionTile(
+                        tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+                        childrenPadding: const EdgeInsets.fromLTRB(
+                          12,
+                          0,
+                          12,
+                          12,
+                        ),
+                        visualDensity: const VisualDensity(vertical: -2),
+                        minTileHeight: 48,
+                        iconColor: const Color(0xFF5B4BFF),
+                        collapsedIconColor: const Color(0xFF5B4BFF),
+                        title: const Text(
+                          'Learn About This Factor',
+                          style: TextStyle(
+                            color: Color(0xFF344054),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        children: [
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              _factorDescription(feature),
+                              style: const TextStyle(
+                                color: Color.fromARGB(255, 37, 37, 37),
+                                fontSize: 12,
+                                height: 1.5,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -729,9 +805,85 @@ class _ExplainScreenState extends State<ExplainScreen> {
               ),
             );
           }),
+
+          const SizedBox(height: 18),
+          const Divider(color: Color(0xFFE9EDF5)),
+          const SizedBox(height: 10),
+
+          const Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.info_outline_rounded,
+                color: Color(0xFF5B5CE2),
+                size: 17,
+              ),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  "How to read this: longer bars indicate greater overall "
+                  "feature importance. These scores are not dengue-risk "
+                  "percentages; see the section above for this prediction's "
+                  "explanation.",
+                  style: TextStyle(
+                    color: Color(0xFF65758E),
+                    fontSize: 11,
+                    height: 1.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
+  }
+
+  String _friendlyGlobalFeature(String feature) {
+    final normalized = feature
+        .trim()
+        .toLowerCase()
+        .replaceAll("-", "_")
+        .replaceAll(" ", "_");
+
+    switch (normalized) {
+      case "temperature":
+      case "temp":
+      case "temp_mean_c":
+      case "mean_temperature":
+      case "temperature_mean":
+        return "Temperature";
+
+      case "rainfall":
+      case "rainfall_mm":
+      case "rain":
+      case "precipitation":
+        return "Rainfall";
+
+      case "humidity":
+      case "humidity_pct":
+      case "relative_humidity":
+        return "Humidity";
+
+      case "year":
+        return "Year";
+
+      case "week":
+      case "week_of_year":
+        return "Week of year";
+
+      case "month":
+        return "Month";
+
+      default:
+        return feature
+            .replaceAll("_", " ")
+            .replaceAll("-", " ")
+            .split(" ")
+            .where((word) => word.isNotEmpty)
+            .map((word) => word[0].toUpperCase() + word.substring(1))
+            .join(" ");
+    }
   }
 
   Widget overallDistrictRiskCard() {
@@ -803,10 +955,10 @@ class _ExplainScreenState extends State<ExplainScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        "CURRENT AI PREDICTION",
+                        "CURRENT PREDICTION",
                         style: TextStyle(
-                          color: Color(0xFF7E8A9D),
-                          fontSize: 10,
+                          color: Color.fromARGB(255, 3, 3, 3),
+                          fontSize: 12,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 0.7,
                         ),
@@ -814,25 +966,23 @@ class _ExplainScreenState extends State<ExplainScreen> {
                       const SizedBox(height: 6),
                       Text(
                         "$currentRisk RISK",
-                        style: TextStyle(
-                          color: currentRiskColor,
-                          fontSize: 26,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 22,
                           fontWeight: FontWeight.w900,
-                        ),
+                        ).copyWith(color: currentRiskColor),
                       ),
                     ],
                   ),
                 ),
                 Container(
-                  width: 78,
-                  height: 78,
+                  width: 75,
+                  height: 75,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: currentRiskColor,
-                      width: 4,
-                    ),
+                    border: Border.all(color: currentRiskColor, width: 4),
                   ),
                   child: Center(
                     child: Column(
@@ -865,9 +1015,9 @@ class _ExplainScreenState extends State<ExplainScreen> {
           const Text(
             "This is the current overall dengue risk prediction for the Colombo District.",
             style: TextStyle(
-              color: Color(0xFF65758E),
-              fontSize: 11,
-              height: 1.45,
+              color: Color.fromARGB(255, 2, 2, 2),
+              fontSize: 12,
+              height: 1.5,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -876,18 +1026,25 @@ class _ExplainScreenState extends State<ExplainScreen> {
     );
   }
 
-  Widget whyHighRiskCard() {
-    final topDrivers = localShap
-        .where((driver) {
-          return driver["label"] != null &&
-              driver["shap_value"] is num &&
-              driver["value"] is num;
-        })
-        .take(3)
-        .toList();
+  Widget riskMeaningCard() {
+    final String meaning;
 
-    if (topDrivers.isEmpty) {
-      return const SizedBox.shrink();
+    switch (risk.toLowerCase()) {
+      case "high":
+        meaning =
+            "Current Colombo District dengue risk as High. This indicates an elevated risk category, but it does not confirm that an outbreak will occur.";
+        break;
+      case "medium":
+        meaning =
+            "Current Colombo District dengue risk as Medium. This indicates an intermediate risk category. Continue monitoring the risk information and its contributing factors.";
+        break;
+      case "low":
+        meaning =
+            "Current Colombo District dengue risk as Low. This is the current risk category, but it does not mean that dengue risk is completely absent.";
+        break;
+      default:
+        meaning =
+            "The current dengue risk category is unavailable or could not be interpreted.";
     }
 
     return SoftCard(
@@ -895,115 +1052,205 @@ class _ExplainScreenState extends State<ExplainScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Premium Header
-          Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [
-                      Color(0xFFEEE9FF),
-                      Color(0xFFF7F5FF),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(
-                  Icons.psychology_rounded,
-                  color: Color(0xFF5B4BFF),
-                  size: 25,
-                ),
-              ),
-              const SizedBox(width: 13),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Factors Affecting This Risk",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF172033),
-                      ),
-                    ),
-                    SizedBox(height: 3),
-                    Text(
-                      "How each factor affected this prediction",
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF7E8A9D),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 7,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF1F4FF),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: const Color(0xFF5B4BFF).withValues(alpha: 0.10),
-                  ),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.circle,
-                      size: 6,
-                      color: Color(0xFF5B4BFF),
-                    ),
-                    SizedBox(width: 5),
-                    Text(
-                      "CURRENT",
-                      style: TextStyle(
-                        color: Color(0xFF5B4BFF),
-                        fontSize: 9,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.6,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          sectionTitle("What Does This Risk Mean?", Icons.info_outline_rounded),
+          const SizedBox(height: 12),
+          Text(
+            meaning,
+            style: const TextStyle(
+              color: Color.fromARGB(255, 10, 10, 10),
+              fontSize: 12,
+              height: 1.6,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-
-          const SizedBox(height: 18),
-
+          const SizedBox(height: 12),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(13),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFF7F8FC),
-              borderRadius: BorderRadius.circular(16),
+              color: const Color(0xFFF4F6FF),
+              borderRadius: BorderRadius.circular(14),
             ),
-            child: const Row(
+            child: const Text(
+              "This is an AI-generated risk classification, not a guarantee of future dengue cases.",
+              style: TextStyle(
+                color: Color(0xFF59677B),
+                fontSize: 11,
+                height: 1.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget interpretationCard() {
+    return SoftCard(
+      color: Colors.white,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          sectionTitle(
+            "How to Interpret This Prediction",
+            Icons.insights_rounded,
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            "The risk category indicates the assessed risk, while confidence reflects the certainty of that classification. Neither guarantees whether dengue cases will occur.",
+            style: TextStyle(
+              color: Color(0xFF65758E),
+              fontSize: 12,
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget whyHighRiskCard() {
+    final drivers = localShap.where((driver) {
+      return driver is Map &&
+          driver["label"] != null &&
+          driver["shap_value"] is num &&
+          driver["value"] is num;
+    }).toList();
+
+    drivers.sort((a, b) {
+      final aValue = (a["shap_value"] as num).abs();
+      final bValue = (b["shap_value"] as num).abs();
+      return bValue.compareTo(aValue);
+    });
+
+    final topDrivers = drivers.take(3).toList();
+
+    if (topDrivers.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final maxMagnitude = topDrivers
+        .map((d) => (d["shap_value"] as num).abs().toDouble())
+        .fold<double>(0, (a, b) => a > b ? a : b);
+
+    String friendlyName(String feature) {
+      final f = feature.trim().toLowerCase().replaceAll('-', '_');
+
+      if (f.contains('temp')) return 'Temperature';
+      if (f.contains('rain') || f.contains('precipitation')) {
+        return 'Rainfall';
+      }
+      if (f.contains('humid')) return 'Humidity';
+      if (f.contains('wind')) return 'Wind Speed';
+      if (f.contains('dew_point')) return 'Dew Point';
+
+      return feature
+          .replaceAll('_', ' ')
+          .split(' ')
+          .where((word) => word.isNotEmpty)
+          .map((word) => '${word[0].toUpperCase()}${word.substring(1)}')
+          .join(' ');
+    }
+
+    String unitFor(String feature) {
+      final f = feature.toLowerCase();
+
+      if (f.contains('temp')) return '°C';
+      if (f.contains('rain') || f.contains('precipitation')) {
+        return ' mm';
+      }
+      if (f.contains('humid')) return '%';
+      if (f.contains('wind')) return ' m/s';
+      if (f.contains('dew_point')) return '°C';
+
+      return '';
+    }
+
+    String buildStory() {
+      final names = topDrivers
+          .map((driver) => friendlyName(driver["label"].toString()))
+          .toList();
+
+      final shapValues = topDrivers
+          .map((driver) => (driver["shap_value"] as num).toDouble())
+          .toList();
+
+      final largestFeature = names.first;
+
+      final allPositive = shapValues.every((value) => value > 0);
+      final allNegative = shapValues.every((value) => value < 0);
+
+      String directionText;
+
+      if (allPositive) {
+        directionText =
+            "All displayed SHAP contributions are positive "
+            "for the output being explained.";
+      } else if (allNegative) {
+        directionText =
+            "All displayed SHAP contributions are negative "
+            "for the output being explained.";
+      } else {
+        directionText =
+            "The displayed features contributed in different "
+            "directions to the output.";
+      }
+
+      return "$largestFeature had the largest contribution "
+          "in magnitude among the factors shown. $directionText";
+    }
+
+    const positiveColor = Color(0xFFE83E75);
+    const negativeColor = Color(0xFF009688);
+    const neutralColor = Color(0xFF667085);
+
+    return SoftCard(
+      color: Colors.white,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          sectionTitle(
+            'Why Did the AI Make This Prediction?',
+            Icons.psychology_alt_rounded,
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'See which input factors contributed most to the '
+            'current Colombo District prediction.',
+            style: TextStyle(
+              color: Color(0xFF7E8A9D),
+              fontSize: 12,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Short, user-friendly summary.
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF4F3FF),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE5E2FF)),
+            ),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
+                const Icon(
                   Icons.auto_awesome_rounded,
                   color: Color(0xFF5B4BFF),
-                  size: 18,
+                  size: 21,
                 ),
-                SizedBox(width: 9),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    "Positive values increased the risk. Negative values reduced it.",
-                    style: TextStyle(
-                      color: Color(0xFF667085),
-                      fontSize: 11,
-                      height: 1.45,
+                    buildStory(),
+                    style: const TextStyle(
+                      color: Color(0xFF39415C),
+                      fontSize: 12,
+                      height: 1.6,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -1012,154 +1259,376 @@ class _ExplainScreenState extends State<ExplainScreen> {
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 22),
 
-          ...topDrivers.map((driver) {
-            final shapValue = (driver["shap_value"] as num).toDouble();
-            final featureValue = (driver["value"] as num).toDouble();
-            final feature = driver["label"].toString();
+          const Text(
+            'SHAP CONTRIBUTIONS',
+            style: TextStyle(
+              color: Color(0xFF7E8A9D),
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Each bar shows the direction and relative size of '
+            'a factor’s contribution to the output.',
+            style: TextStyle(
+              color: Color(0xFF667085),
+              fontSize: 11,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 18),
 
-            final positive = shapValue >= 0;
-
-            final accentColor =
-                positive ? const Color(0xFFFF477E) : const Color(0xFF00A6A6);
-
-            final backgroundColor =
-                positive ? const Color(0xFFFFF6F8) : const Color(0xFFF2FBFB);
-
-            final impactText = positive
-                ? "Increased predicted risk"
-                : "Reduced predicted risk";
-
-            return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(15),
-              decoration: BoxDecoration(
-                color: backgroundColor,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: accentColor.withValues(alpha: 0.13),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.018),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+          // Chart legend.
+          Wrap(
+            spacing: 14,
+            runSpacing: 8,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: const BoxDecoration(
+                      color: positiveColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'Positive contribution',
+                    style: TextStyle(
+                      color: neutralColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),
-              child: Row(
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: const BoxDecoration(
+                      color: negativeColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'Negative contribution',
+                    style: TextStyle(
+                      color: neutralColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+
+          // Signed horizontal contribution chart.
+          ...topDrivers.map((driver) {
+            final feature = driver['label'].toString();
+            final name = friendlyName(feature);
+            final value = (driver['value'] as num).toDouble();
+            final shapValue = (driver['shap_value'] as num).toDouble();
+            final magnitude = shapValue.abs();
+            final barColor = shapValue > 0
+                ? positiveColor
+                : shapValue < 0
+                ? negativeColor
+                : Colors.grey;
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 22),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Direction Icon
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.85),
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: Icon(
-                      positive
-                          ? Icons.trending_up_rounded
-                          : Icons.trending_down_rounded,
-                      color: accentColor,
-                      size: 23,
-                    ),
-                  ),
-
-                  const SizedBox(width: 13),
-
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          feature,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          name,
                           style: const TextStyle(
                             color: Color(0xFF172033),
-                            fontWeight: FontWeight.w900,
-                            fontSize: 14,
-                          ),
-                        ),
-
-                        const SizedBox(height: 7),
-
-                        // Observed Value Chip
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 9,
-                            vertical: 5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.78),
-                            borderRadius: BorderRadius.circular(9),
-                          ),
-                          child: Text(
-                            "Observed value  ${featureValue.toStringAsFixed(2)}",
-                            style: const TextStyle(
-                              color: Color(0xFF667085),
-                              fontSize: 9,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 8),
-
-                        Text(
-                          impactText,
-                          style: TextStyle(
-                            color: accentColor,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(width: 10),
-
-                  // SHAP Impact Pill
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 9,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.82),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          positive
-                              ? "+${shapValue.abs().toStringAsFixed(4)}"
-                              : "-${shapValue.abs().toStringAsFixed(4)}",
-                          style: TextStyle(
-                            color: accentColor,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        const Text(
-                          "SHAP",
-                          style: TextStyle(
-                            color: Color(0xFF98A2B3),
-                            fontSize: 8,
+                            fontSize: 13,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
-                      ],
+                      ),
+                      Text(
+                        '${value.toStringAsFixed(2)}${unitFor(feature)}',
+                        style: const TextStyle(
+                          color: Color(0xFF475467),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    'Contribution: ${shapValue > 0 ? '+' : ''}'
+                    '${shapValue.toStringAsFixed(4)}',
+                    style: TextStyle(
+                      color: barColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Zero line is in the centre.
+                  SizedBox(
+                    height: 24,
+                    width: double.infinity,
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final chartWidth = constraints.maxWidth;
+                        final halfWidth = chartWidth / 2;
+                        final availableBarWidth = (halfWidth - 3).clamp(
+                          0.0,
+                          halfWidth,
+                        );
+
+                        final fraction = maxMagnitude == 0
+                            ? 0.0
+                            : (magnitude / maxMagnitude)
+                                  .clamp(0.0, 1.0)
+                                  .toDouble();
+
+                        final barWidth = availableBarWidth * fraction;
+
+                        return Stack(
+                          clipBehavior: Clip.hardEdge,
+                          children: [
+                            Positioned(
+                              left: 0,
+                              right: 0,
+                              top: 8,
+                              child: Container(
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE9EDF5),
+                                  borderRadius: BorderRadius.circular(5),
+                                ),
+                              ),
+                            ),
+
+                            // Negative contribution extends left.
+                            if (shapValue < 0)
+                              Positioned(
+                                left: halfWidth - barWidth,
+                                width: barWidth,
+                                top: 8,
+                                child: Container(
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: negativeColor,
+                                    borderRadius: BorderRadius.circular(5),
+                                  ),
+                                ),
+                              ),
+
+                            // Positive contribution extends right.
+                            if (shapValue > 0)
+                              Positioned(
+                                left: halfWidth,
+                                width: barWidth,
+                                top: 8,
+                                child: Container(
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: positiveColor,
+                                    borderRadius: BorderRadius.circular(5),
+                                  ),
+                                ),
+                              ),
+
+                            // Central zero reference line.
+                            Positioned(
+                              left: halfWidth - 1,
+                              top: 2,
+                              bottom: 2,
+                              child: Container(
+                                width: 2,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF344054),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                  const Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Negative contribution',
+                        style: TextStyle(
+                          color: Color.fromARGB(255, 40, 41, 43),
+                          fontSize: 9,
+                        ),
+                      ),
+                      Text(
+                        '0',
+                        style: TextStyle(
+                          color: Color.fromARGB(255, 32, 33, 36),
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      Text(
+                        'Positive contribution',
+                        style: TextStyle(
+                          color: Color.fromARGB(255, 40, 41, 43),
+                          fontSize: 9,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFAF9FF),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE3E0FF)),
+                    ),
+                    child: Theme(
+                      data: Theme.of(
+                        context,
+                      ).copyWith(dividerColor: Colors.transparent),
+                      child: ExpansionTile(
+                        tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+                        childrenPadding: const EdgeInsets.fromLTRB(
+                          12,
+                          0,
+                          12,
+                          12,
+                        ),
+                        visualDensity: const VisualDensity(vertical: -2),
+                        minTileHeight: 44,
+                        iconColor: const Color(0xFF5B4BFF),
+                        collapsedIconColor: const Color(0xFF5B4BFF),
+                        title: const Text(
+                          'About This Factor',
+                          style: TextStyle(
+                            color: Color(0xFF344054),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        children: [
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              _factorDescription(name),
+                              style: const TextStyle(
+                                color: Color(0xFF536174),
+                                fontSize: 11,
+                                height: 1.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
             );
           }),
+
+          // Optional technical details.
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            childrenPadding: const EdgeInsets.only(bottom: 8),
+            leading: const Icon(
+              Icons.science_outlined,
+              color: Color(0xFF5B4BFF),
+            ),
+            title: const Text(
+              'Technical explanation (SHAP)',
+              style: TextStyle(
+                color: Color(0xFF344054),
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            subtitle: const Text(
+              'View numerical contribution values',
+              style: TextStyle(color: Color(0xFF7E8A9D), fontSize: 10),
+            ),
+            children: topDrivers.map((driver) {
+              final feature = friendlyName(driver['label'].toString());
+              final shapValue = (driver['shap_value'] as num).toDouble();
+
+              final color = shapValue > 0
+                  ? positiveColor
+                  : shapValue < 0
+                  ? negativeColor
+                  : neutralColor;
+
+              return ListTile(
+                dense: true,
+                title: Text(feature, style: const TextStyle(fontSize: 12)),
+                subtitle: Text(
+                  shapValue > 0
+                      ? 'Positive contribution to output'
+                      : shapValue < 0
+                      ? 'Negative contribution to output'
+                      : 'Zero contribution',
+                  style: const TextStyle(fontSize: 10),
+                ),
+                trailing: Text(
+                  '${shapValue > 0 ? '+' : ''}'
+                  '${shapValue.toStringAsFixed(4)}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+
+          RichText(
+            text: TextSpan(
+              style: const TextStyle(
+                color: Color.fromARGB(255, 0, 0, 0),
+                fontSize: 13,
+                height: 1.55,
+              ),
+              children: [
+                const TextSpan(
+                  text: "How to understand this: ",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(
+                  text:
+                      "${friendlyName(topDrivers.first['label'].toString())} "
+                      "has the largest contribution among the factors shown. "
+                      "Positive and negative values indicate different contribution directions, "
+                      "but do not directly mean dengue risk increases or decreases.",
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -1191,10 +1660,7 @@ class _ExplainScreenState extends State<ExplainScreen> {
                 height: 48,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [
-                      Color(0xFFEAF8F3),
-                      Color(0xFFDDF2EA),
-                    ],
+                    colors: [Color(0xFFEAF8F3), Color(0xFFDDF2EA)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -1307,8 +1773,9 @@ class _ExplainScreenState extends State<ExplainScreen> {
               return const SizedBox.shrink();
             }
 
-            final priorityText =
-                priority != null && priority.isNotEmpty ? priority : "Action";
+            final priorityText = priority != null && priority.isNotEmpty
+                ? priority
+                : "Action";
 
             // Priority-based colors
             Color accentColor;
@@ -1337,9 +1804,7 @@ class _ExplainScreenState extends State<ExplainScreen> {
               decoration: BoxDecoration(
                 color: const Color(0xFFFBFCFE),
                 borderRadius: BorderRadius.circular(21),
-                border: Border.all(
-                  color: accentColor.withValues(alpha: 0.13),
-                ),
+                border: Border.all(color: accentColor.withValues(alpha: 0.13)),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.015),
@@ -1541,10 +2006,7 @@ class _ExplainScreenState extends State<ExplainScreen> {
                 height: 44,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [
-                      Color(0xFFEFF3FF),
-                      Color(0xFFE4EAFF),
-                    ],
+                    colors: [Color(0xFFEFF3FF), Color(0xFFE4EAFF)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -1571,7 +2033,7 @@ class _ExplainScreenState extends State<ExplainScreen> {
                     ),
                     SizedBox(height: 3),
                     Text(
-                      "Recent model prediction history",
+                      "Recent prediction history",
                       style: TextStyle(
                         color: Color(0xFF7E8A9D),
                         fontSize: 11,
@@ -1621,7 +2083,8 @@ class _ExplainScreenState extends State<ExplainScreen> {
               itemBuilder: (context, index) {
                 final item = validTimeline[index];
 
-                final riskLevel = item["risk"]?.toString() ??
+                final riskLevel =
+                    item["risk"]?.toString() ??
                     item["risk_level"]?.toString() ??
                     "Unknown";
 
@@ -1643,14 +2106,10 @@ class _ExplainScreenState extends State<ExplainScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: color.withValues(alpha: 0.16),
-                    ),
+                    border: Border.all(color: color.withValues(alpha: 0.16)),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF172033).withValues(
-                          alpha: 0.035,
-                        ),
+                        color: const Color(0xFF172033).withValues(alpha: 0.035),
                         blurRadius: 12,
                         offset: const Offset(0, 5),
                       ),
@@ -1668,11 +2127,7 @@ class _ExplainScreenState extends State<ExplainScreen> {
                               color: color.withValues(alpha: 0.10),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Icon(
-                              icon,
-                              color: color,
-                              size: 19,
-                            ),
+                            child: Icon(icon, color: color, size: 19),
                           ),
                           const Spacer(),
                           Container(
@@ -1766,40 +2221,20 @@ class _ExplainScreenState extends State<ExplainScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          sectionTitle(
-            "Prediction Evidence",
-            Icons.fact_check_outlined,
-          ),
+          sectionTitle("Prediction Evidence", Icons.fact_check_outlined),
           const SizedBox(height: 8),
           const Text(
             "Model and prediction information returned by the deployed API.",
-            style: TextStyle(
-              color: Color(0xFF7A879A),
-              height: 1.4,
-            ),
+            style: TextStyle(color: Color(0xFF7A879A), height: 1.4),
           ),
           const SizedBox(height: 18),
-          if (hasModelInfo)
-            _evidenceRow(
-              "Model",
-              modelUsed!,
-            ),
-          if (hasValidation)
-            _evidenceRow(
-              "Validation",
-              validation!,
-            ),
-          if (hasInputType)
-            _evidenceRow(
-              "Input Type",
-              inputType!,
-            ),
+          if (hasModelInfo) _evidenceRow("Model", modelUsed!),
+          if (hasValidation) _evidenceRow("Validation", validation!),
+          if (hasInputType) _evidenceRow("Input Type", inputType!),
           if (hasNote)
             Container(
               width: double.infinity,
-              margin: const EdgeInsets.only(
-                top: 8,
-              ),
+              margin: const EdgeInsets.only(top: 8),
               padding: const EdgeInsets.all(13),
               decoration: BoxDecoration(
                 color: const Color(0xFFF6F8FC),
@@ -1819,14 +2254,9 @@ class _ExplainScreenState extends State<ExplainScreen> {
     );
   }
 
-  Widget _evidenceRow(
-    String title,
-    String value,
-  ) {
+  Widget _evidenceRow(String title, String value) {
     return Padding(
-      padding: const EdgeInsets.only(
-        bottom: 12,
-      ),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1865,15 +2295,10 @@ class _ExplainScreenState extends State<ExplainScreen> {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFF8F9FF),
-            Color(0xFFF3F5FC),
-          ],
+          colors: [Color(0xFFF8F9FF), Color(0xFFF3F5FC)],
         ),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: const Color(0xFFE3E7F2),
-        ),
+        border: Border.all(color: const Color(0xFFE3E7F2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1922,7 +2347,7 @@ class _ExplainScreenState extends State<ExplainScreen> {
           ),
           const SizedBox(height: 16),
           const Text(
-            "This explanation is generated from the deployed Colombo District dengue prediction model using both Local and Global SHAP analysis.",
+            "This screen explains the current Colombo District dengue risk prediction and highlights the factors.",
             style: TextStyle(
               color: Color(0xFF59677B),
               fontSize: 11.5,
@@ -1937,9 +2362,7 @@ class _ExplainScreenState extends State<ExplainScreen> {
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.65),
               borderRadius: BorderRadius.circular(15),
-              border: Border.all(
-                color: const Color(0xFFE7EAF3),
-              ),
+              border: Border.all(color: const Color(0xFFE7EAF3)),
             ),
             child: const Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1994,106 +2417,51 @@ class _ExplainScreenState extends State<ExplainScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FC),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF4F7FC),
+        backgroundColor: const Color(0xFF00796B),
+        foregroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
         titleSpacing: 16,
-        title: Row(
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFFFFB7A1),
-                    Color(0xFFFF8E72),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0xFFFF8E72).withValues(alpha: 0.22),
-                    blurRadius: 12,
-                    offset: Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.psychology_rounded,
-                color: Colors.white,
-                size: 21,
-              ),
-            ),
-            const SizedBox(width: 13),
-            const Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Explainable AI",
-                    style: TextStyle(
-                      fontSize: 21,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.4,
-                      color: Color(0xFF172033),
-                    ),
-                  ),
-                  SizedBox(height: 3),
-                  Text(
-                    "SHAP-powered risk intelligence",
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.1,
-                      color: Color(0xFF7E8A9D),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: const Color(0xFFE3E8F2),
-                ),
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  const Icon(
-                    Icons.notifications_none_rounded,
-                    size: 23,
-                    color: Color(0xFF344054),
-                  ),
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: Container(
-                      width: 7,
-                      height: 7,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFF477E),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white,
-                          width: 1.5,
-                        ),
+        toolbarHeight: 78,
+        centerTitle: false,
+        automaticallyImplyLeading: true,
+        title: Align(
+          alignment: Alignment.centerLeft,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const SizedBox(width: 13),
+              const Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Explainable Artificial Intelligence",
+                      style: TextStyle(
+                        fontSize: 21,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.3,
+                        color: Colors.white,
                       ),
                     ),
-                  ),
-                ],
+                    SizedBox(height: 3),
+                    Text(
+                      "SHAP-powered risk intelligence",
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.2,
+                        color: Color.fromARGB(255, 255, 255, 255),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       body: SafeArea(
@@ -2111,45 +2479,59 @@ class _ExplainScreenState extends State<ExplainScreen> {
                   ),
                 ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
-              // 1. CURRENT AI PREDICTION
+              // 1. CURRENT COLOMBO DISTRICT RISK
               overallDistrictRiskCard()
                   .animate()
                   .fade(duration: 700.ms)
-                  .slideY(begin: 0.25, end: 0, duration: 700.ms),
+                  .slideY(begin: 0.15, end: 0),
 
               const SizedBox(height: 16),
 
-              // 2. CURRENT PREDICTION FACTORS
+              // 2. WHAT DOES THIS RISK MEAN?
+              riskMeaningCard()
+                  .animate()
+                  .fade(duration: 700.ms)
+                  .slideY(begin: 0.15, end: 0),
+
+              const SizedBox(height: 16),
+
+              // 3. WHY WAS THIS RISK PREDICTED?
               whyHighRiskCard()
-                  .animate(delay: 220.ms)
+                  .animate()
                   .fade(duration: 700.ms)
-                  .slideY(begin: 0.25, end: 0, duration: 700.ms),
+                  .slideY(begin: 0.15, end: 0),
 
               const SizedBox(height: 16),
 
-              // 3. OVERALL MODEL FACTORS
-              globalImportanceCard()
-                  .animate(delay: 420.ms)
-                  .fade(duration: 700.ms)
-                  .slideY(begin: 0.25, end: 0, duration: 700.ms),
+              // 4. GLOBAL IMPORTANCE — temporarily hidden
+              // Keep globalImportanceCard() for future use.
+
+              // 5. RISK EVOLUTION — ONLY WHEN DATA EXISTS
+              if (riskTimeline.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                riskTimelineCard()
+                    .animate()
+                    .fade(duration: 700.ms)
+                    .slideY(begin: 0.15, end: 0),
+              ],
 
               const SizedBox(height: 16),
 
-              // 4. RECOMMENDED ACTIONS
-              interventionCard()
-                  .animate(delay: 620.ms)
+              // 6. HOW TO INTERPRET THIS PREDICTION
+              interpretationCard()
+                  .animate()
                   .fade(duration: 700.ms)
-                  .slideY(begin: 0.25, end: 0, duration: 700.ms),
+                  .slideY(begin: 0.15, end: 0),
 
               const SizedBox(height: 16),
 
-              // 4. AI TRANSPARENCY
+              // 7. AI TRANSPARENCY
               researchNoteCard()
-                  .animate(delay: 620.ms)
+                  .animate()
                   .fade(duration: 700.ms)
-                  .slideY(begin: 0.25, end: 0, duration: 700.ms),
+                  .slideY(begin: 0.15, end: 0),
             ],
           ),
         ),
