@@ -1,6 +1,27 @@
+
+# Python cache files
 __pycache__/
+*.py[cod]
 *.pyc
+
+# Python virtual environments
+.venv/
+venv/
+env/
+backend/.venv/
+
+# Environment variables and secrets
 .env
+.env.*
+!.env.example
 
 # NLP model files (large files)
-backend/Dengue_NLP_Model
+backend/Dengue_NLP_Model/
+
+# IDE and editor files
+.vscode/
+.idea/
+
+# Operating system files
+.DS_Store
+Thumbs.db
