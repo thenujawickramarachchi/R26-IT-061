@@ -1,5 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../widgets/common_widgets.dart';
+
 class BackendConfig {
   BackendConfig._();
 
@@ -19,7 +21,7 @@ class BackendConfig {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String safeUrl = newBaseUrl.trim().isEmpty
         ? defaultBaseUrl
-        : newBaseUrl.trim();
+        : normalizeBaseUrl(newBaseUrl);
     final String safeApiKey = newApiKey.trim();
 
     baseUrl = safeUrl;

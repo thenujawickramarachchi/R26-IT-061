@@ -32,6 +32,11 @@ class ApiService {
     final http.Response response = await http
         .get(_uri('/health'), headers: _headers)
         .timeout(const Duration(seconds: 15));
+    if (response.statusCode == 404) {
+      throw const ApiException(
+        'Backend reached, but its /health endpoint is missing. Start the updated backend API.',
+      );
+    }
     return _decodeResponse(response);
   }
 

@@ -4,3 +4,4 @@ __pycache__/
 
 # NLP model files (large files)
 backend/Dengue_NLP_Model
+/backend/Dengue_NLP_Model.zip

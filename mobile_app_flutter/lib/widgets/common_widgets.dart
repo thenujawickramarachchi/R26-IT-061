@@ -42,9 +42,7 @@ Map<String, dynamic>? mapOrNull(dynamic value) {
 String normalizeBaseUrl(String baseUrl) {
   final String trimmed = baseUrl.trim();
   if (trimmed.isEmpty) return trimmed;
-  return trimmed.endsWith('/')
-      ? trimmed.substring(0, trimmed.length - 1)
-      : trimmed;
+  return trimmed.replaceFirst(RegExp(r'/+$'), '');
 }
 
 String formatApiDate(dynamic value) {

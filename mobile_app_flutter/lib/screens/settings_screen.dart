@@ -1,4 +1,8 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 import '../services/api_service.dart';
 import '../widgets/common_widgets.dart';
@@ -87,6 +91,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ? 'Backend connection successful.'
             : 'Backend returned an unexpected response.';
       });
+    } on TimeoutException {
+      if (!mounted) return;
+      setState(() {
+        _success = false;
+        _message = 'Connection timed out. Check the URL, Wi-Fi, and backend server.';
+      });
+    } on SocketException {
+      if (!mounted) return;
+      setState(() {
+        _success = false;
+        _message = 'Backend unreachable. Check the server address and network connection.';
+      });
+    } on http.ClientException {
+      if (!mounted) return;
+      setState(() {
+        _success = false;
+        _message = 'Backend unreachable. Check the server address and network connection.';
+      });
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -123,7 +145,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             autocorrect: false,
             decoration: const InputDecoration(
               labelText: 'Backend server URL',
-              hintText: 'http://127.0.0.1:8000',
+              hintText: 'http://192.168.x.x:8000',
               prefixIcon: Icon(Icons.dns_outlined),
             ),
           ),
